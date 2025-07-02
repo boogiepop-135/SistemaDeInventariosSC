@@ -17,7 +17,13 @@ export const AgregarInventario = () => {
         warranty_date: "",
         manual: false,
         status: "stock",
-        assigned_to: ""
+        assigned_to: "",
+        physical_status: "",
+        area: "",
+        recurring_issues: "",
+        knowledge_level: "",
+        support_person: "",
+        support_time: ""
     });
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
@@ -34,7 +40,7 @@ export const AgregarInventario = () => {
         e.preventDefault();
         setError("");
         setSuccess("");
-        const required = ["name", "type"];
+        const required = ["name", "type", "category"];
         for (let field of required) {
             if (!form[field]) {
                 setError(`Falta el campo requerido: ${field}`);
@@ -72,7 +78,13 @@ export const AgregarInventario = () => {
                 warranty_date: "",
                 manual: false,
                 status: "stock",
-                assigned_to: ""
+                assigned_to: "",
+                physical_status: "",
+                area: "",
+                recurring_issues: "",
+                knowledge_level: "",
+                support_person: "",
+                support_time: ""
             });
         } catch (err) {
             setError("Error de conexión con el backend");
@@ -92,8 +104,25 @@ export const AgregarInventario = () => {
                     <input type="text" className="form-control" name="description" value={form.description} onChange={handleChange} />
                 </div>
                 <div className="mb-3">
-                    <label className="form-label">Categoría</label>
-                    <input type="text" className="form-control" name="category" value={form.category} onChange={handleChange} />
+                    <label className="form-label">Categoría *</label>
+                    <select className="form-select" name="category" value={form.category} onChange={handleChange}>
+                        <option value="">Selecciona categoría</option>
+                        <option value="PC">PC</option>
+                        <option value="Laptop">Laptop</option>
+                        <option value="Periférico">Periférico</option>
+                        <option value="Impresora">Impresora</option>
+                        <option value="Escáner">Escáner</option>
+                        <option value="Switch">Switch</option>
+                        <option value="Router">Router</option>
+                        <option value="Access Point">Access Point</option>
+                        <option value="Cableado">Cableado</option>
+                        <option value="CCTV">CCTV</option>
+                        <option value="DVR/NVR">DVR/NVR</option>
+                        <option value="POS">POS</option>
+                        <option value="Tablet">Tablet</option>
+                        <option value="Software">Software</option>
+                        <option value="Correo">Correo</option>
+                    </select>
                 </div>
                 <div className="mb-3">
                     <label className="form-label">Tipo *</label>
@@ -138,6 +167,30 @@ export const AgregarInventario = () => {
                 <div className="mb-3">
                     <label className="form-label">Asignado a</label>
                     <input type="text" className="form-control" name="assigned_to" value={form.assigned_to} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Estado físico</label>
+                    <input type="text" className="form-control" name="physical_status" value={form.physical_status} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Área</label>
+                    <input type="text" className="form-control" name="area" value={form.area} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Problemas recurrentes</label>
+                    <input type="text" className="form-control" name="recurring_issues" value={form.recurring_issues} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Nivel de conocimiento</label>
+                    <input type="text" className="form-control" name="knowledge_level" value={form.knowledge_level} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Soporte actual (persona)</label>
+                    <input type="text" className="form-control" name="support_person" value={form.support_person} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Tiempo de soporte</label>
+                    <input type="text" className="form-control" name="support_time" value={form.support_time} onChange={handleChange} />
                 </div>
                 {error && <div className="alert alert-danger">{error}</div>}
                 {success && <div className="alert alert-success">{success}</div>}

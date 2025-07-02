@@ -34,10 +34,16 @@ export const Navbar = () => {
 							<Link to="/admin" className="nav-link">Panel Admin</Link>
 						</li>
 					)}
-					{role && (
+					{role ? (
 						<li className="nav-item">
 							<button className="btn btn-outline-danger ms-3" onClick={handleLogout}>
 								Cerrar sesión
+							</button>
+						</li>
+					) : (
+						<li className="nav-item">
+							<button className="btn btn-outline-primary ms-3" onClick={() => navigate("/login")}>
+								Iniciar sesión
 							</button>
 						</li>
 					)}

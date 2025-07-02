@@ -14,6 +14,7 @@ import { AgregarInventario } from "./pages/AgregarInventario";
 import { CrearTicket } from "./pages/CrearTicket";
 import { Tickets } from "./pages/Tickets";
 import { Login } from "./pages/Login";
+import { Admin } from "./pages/Admin";
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -25,6 +26,7 @@ export const router = createBrowserRouter(
       <Route path="/inventario/agregar" element={<AgregarInventario />} />
       <Route path="/tickets/crear" element={<CrearTicket />} />
       <Route path="/tickets" element={<Tickets />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="/single/:theId" element={<Single />} />
       <Route path="/demo" element={<Demo />} />
     </Route>

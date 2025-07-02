@@ -1,6 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
+from datetime import datetime
+import pytz
 
 db = SQLAlchemy()
 
@@ -28,7 +30,8 @@ class Item(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     description: Mapped[str] = mapped_column(String(255), nullable=True)
-    category: Mapped[str] = mapped_column(String(80), nullable=True)
+    # Ej: 'PC', 'Impresora', 'Switch', 'CCTV', 'POS', 'Software', 'Correo'
+    category: Mapped[str] = mapped_column(String(80), nullable=False)
     # laptop, pc, monitor, etc.
     type: Mapped[str] = mapped_column(String(50), nullable=False)
     brand: Mapped[str] = mapped_column(String(50), nullable=True)
@@ -44,6 +47,16 @@ class Item(db.Model):
         String(50), nullable=False, default="stock")
     assigned_to: Mapped[str] = mapped_column(
         String(120), nullable=True)  # nombre de usuario o null
+    physical_status: Mapped[str] = mapped_column(
+        String(80), nullable=True)  # Bueno, Regular, Malo
+    # Ej: Ventas, Soporte, etc.
+    area: Mapped[str] = mapped_column(String(80), nullable=True)
+    recurring_issues: Mapped[str] = mapped_column(String(255), nullable=True)
+    knowledge_level: Mapped[str] = mapped_column(
+        String(80), nullable=True)  # Básico, Intermedio, Avanzado
+    support_person: Mapped[str] = mapped_column(String(120), nullable=True)
+    # Ej: 2h, 1d, etc.
+    support_time: Mapped[str] = mapped_column(String(80), nullable=True)
 
     def serialize(self):
         return {
@@ -59,7 +72,13 @@ class Item(db.Model):
             "warranty_date": self.warranty_date,
             "manual": self.manual,
             "status": self.status,
-            "assigned_to": self.assigned_to
+            "assigned_to": self.assigned_to,
+            "physical_status": self.physical_status,
+            "area": self.area,
+            "recurring_issues": self.recurring_issues,
+            "knowledge_level": self.knowledge_level,
+            "support_person": self.support_person,
+            "support_time": self.support_time
         }
 
 
@@ -94,6 +113,8 @@ class Ticket(db.Model):
         # urgente, critico, normal
         String(20), nullable=False, default="normal")
     comments: Mapped[str] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(30), nullable=False, default=lambda: datetime.now(
+        pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S"))
 
     def serialize(self):
         return {
@@ -106,5 +127,6 @@ class Ticket(db.Model):
             "branch": self.branch,
             "department": self.department,
             "priority": self.priority,
-            "comments": self.comments
+            "comments": self.comments,
+            "created_at": self.created_at or datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
         }

@@ -39,26 +39,35 @@ export const Tickets = () => {
                         <thead>
                             <tr>
                                 <th>Título</th>
+                                <th>Estado</th>
+                                <th>Prioridad</th>
                                 <th>Sucursal</th>
                                 <th>Departamento</th>
-                                <th>Prioridad</th>
-                                <th>Estado</th>
                                 <th>Persona</th>
                                 <th>Comentarios</th>
                                 <th>ID Artículo</th>
+                                <th>Fecha/Hora</th>
                             </tr>
                         </thead>
                         <tbody>
                             {tickets.map(ticket => (
                                 <tr key={ticket.id}>
                                     <td>{ticket.title}</td>
+                                    <td>
+                                        {ticket.status === "solucionado"
+                                            ? <span className="badge bg-success">Resuelto</span>
+                                            : ticket.status === "pendiente"
+                                                ? <span className="badge bg-warning text-dark">Pendiente</span>
+                                                : <span className="badge bg-info text-dark">{ticket.status}</span>
+                                        }
+                                    </td>
+                                    <td>{ticket.priority}</td>
                                     <td>{ticket.branch}</td>
                                     <td>{ticket.department}</td>
-                                    <td>{ticket.priority}</td>
-                                    <td>{ticket.status}</td>
                                     <td>{ticket.created_by}</td>
                                     <td>{ticket.comments}</td>
                                     <td>{ticket.item_id}</td>
+                                    <td>{ticket.created_at}</td>
                                 </tr>
                             ))}
                         </tbody>

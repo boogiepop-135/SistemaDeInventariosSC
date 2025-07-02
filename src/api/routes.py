@@ -5,10 +5,11 @@ from flask import Flask, request, jsonify, url_for, Blueprint
 from api.models import db, User, Item, Ticket
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
-import datetime
+from datetime import datetime, timedelta
 import jwt
 from flask import current_app
 from werkzeug.security import check_password_hash, generate_password_hash
+import pytz
 
 api = Blueprint('api', __name__)
 
@@ -22,7 +23,9 @@ SECRET_KEY = "super-secret-key"
 # Usuarios permitidos (ejemplo, deberías migrar a la base de datos)
 valid_users = {
     "Levi": {"password": generate_password_hash("BM56Oi3QdUxtFoAWrJMK"), "role": "admin"},
-    "Inrra": {"password": generate_password_hash("qlII7kBWDR8pHwfEZrwM"), "role": "tecnico"}
+    "Inrra": {"password": generate_password_hash("qlII7kBWDR8pHwfEZrwM"), "role": "tecnico"},
+    "JRQ": {"password": generate_password_hash("i1hOHoz7YHwb6WTZfMgI"), "role": "usuario"},
+    "sccs": {"password": generate_password_hash("NXxwhV9xKrkPQTbJtAKC"), "role": "usuario"}
 }
 
 
@@ -30,7 +33,7 @@ def generate_token(username, role):
     payload = {
         "sub": username,
         "role": role,
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+        "exp": datetime.utcnow() + timedelta(hours=8)
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
@@ -202,7 +205,9 @@ def create_ticket():
         branch=data.get("branch"),
         department=data.get("department"),
         priority=data.get("priority", "normal"),
-        comments=data.get("comments")
+        comments=data.get("comments"),
+        created_at=datetime.now(pytz.timezone(
+            "America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
     )
     db.session.add(ticket)
     db.session.commit()
@@ -244,4 +249,5 @@ def delete_ticket(ticket_id):
 @api.route('/admin-only', methods=['GET'])
 @jwt_required_role(["admin"])
 def admin_only():
+    return jsonify({"msg": "Solo admins pueden ver esto"}), 200
     return jsonify({"msg": "Solo admins pueden ver esto"}), 200
