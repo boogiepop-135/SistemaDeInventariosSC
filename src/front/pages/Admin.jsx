@@ -6,6 +6,11 @@ export const Admin = () => {
     const [error, setError] = useState("");
     const [editId, setEditId] = useState(null);
     const [editForm, setEditForm] = useState({});
+    const [users, setUsers] = useState([]);
+    const [userForm, setUserForm] = useState({ username: "", password: "", role: "usuario" });
+    const [userMsg, setUserMsg] = useState("");
+    const [editUser, setEditUser] = useState(null);
+    const [editUserForm, setEditUserForm] = useState({ password: "", role: "usuario" });
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
     let backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -13,6 +18,39 @@ export const Admin = () => {
 
     // Cargar inventario y tickets
     useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const itemsResp = await fetch(`${backendUrl}/api/items`, {
+                    headers: { "Authorization": "Bearer " + token }
+                });
+                const ticketsResp = await fetch(`${backendUrl}/api/tickets`, {
+                    headers: { "Authorization": "Bearer " + token }
+                });
+                if (!itemsResp.ok || !ticketsResp.ok) throw new Error("Error al cargar datos");
+                setArticulos(await itemsResp.json());
+                setTickets(await ticketsResp.json());
+            } catch {
+                setError("Error al cargar inventario o tickets");
+            }
+        };
+        fetchData();
+    }, [token, backendUrl]);
+
+    // Obtener usuarios (solo los del diccionario, para demo)
+    const fetchUsers = async () => {
+        let backendUrl = import.meta.env.VITE_BACKEND_URL;
+        if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
+        const token = localStorage.getItem("token");
+        try {
+            const resp = await fetch(`${backendUrl}/api/users`, {
+                headers: { "Authorization": "Bearer " + token }
+            });
+            if (resp.ok) setUsers(await resp.json());
+        } catch { }
+    };
+
+    useEffect(() => {
+        fetchUsers();
         const fetchData = async () => {
             try {
                 const itemsResp = await fetch(`${backendUrl}/api/items`, {
@@ -79,12 +117,219 @@ export const Admin = () => {
         }
     };
 
+    // Crear usuario
+    const handleUserChange = e => {
+        const { name, value } = e.target;
+        setUserForm({ ...userForm, [name]: value });
+    };
+
+    const handleUserCreate = async e => {
+        e.preventDefault();
+        setUserMsg("");
+        let backendUrl = import.meta.env.VITE_BACKEND_URL;
+        if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
+        const token = localStorage.getItem("token");
+        try {
+            const resp = await fetch(`${backendUrl}/api/users`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify(userForm)
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                setUserMsg(data.msg || "Error al crear usuario");
+                return;
+            }
+            setUserMsg("Usuario creado correctamente");
+            setUserForm({ username: "", password: "", role: "usuario" });
+            fetchUsers();
+        } catch {
+            setUserMsg("Error de conexión");
+        }
+    };
+
+    // Eliminar usuario
+    const handleUserDelete = async username => {
+        if (!window.confirm(`¿Seguro que deseas eliminar el usuario ${username}?`)) return;
+        let backendUrl = import.meta.env.VITE_BACKEND_URL;
+        if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
+        const token = localStorage.getItem("token");
+        try {
+            const resp = await fetch(`${backendUrl}/api/users/${username}`, {
+                method: "DELETE",
+                headers: { "Authorization": "Bearer " + token }
+            });
+            const data = await resp.json();
+            setUserMsg(data.msg);
+            fetchUsers();
+        } catch {
+            setUserMsg("Error de conexión");
+        }
+    };
+
+    // Editar usuario
+    const handleEditUser = (user) => {
+        setEditUser(user.username);
+        setEditUserForm({ password: "", role: user.role });
+    };
+
+    const handleEditUserChange = e => {
+        const { name, value } = e.target;
+        setEditUserForm({ ...editUserForm, [name]: value });
+    };
+
+    const handleEditUserSave = async (username) => {
+        let backendUrl = import.meta.env.VITE_BACKEND_URL;
+        if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
+        const token = localStorage.getItem("token");
+        try {
+            const resp = await fetch(`${backendUrl}/api/users/${username}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify(editUserForm)
+            });
+            const data = await resp.json();
+            setUserMsg(data.msg);
+            setEditUser(null);
+            fetchUsers();
+        } catch {
+            setUserMsg("Error de conexión");
+        }
+    };
+
+    const handleExportInventario = async () => {
+        let backendUrl = import.meta.env.VITE_BACKEND_URL;
+        if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
+        const token = localStorage.getItem("token");
+        const resp = await fetch(`${backendUrl}/api/items/export`, {
+            headers: { "Authorization": "Bearer " + token }
+        });
+        if (!resp.ok) return alert("No se pudo descargar el inventario");
+        const blob = await resp.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "inventario.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    };
+
+    const handleExportTickets = async () => {
+        let backendUrl = import.meta.env.VITE_BACKEND_URL;
+        if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
+        const token = localStorage.getItem("token");
+        const resp = await fetch(`${backendUrl}/api/tickets/export`, {
+            headers: { "Authorization": "Bearer " + token }
+        });
+        if (!resp.ok) return alert("No se pudo descargar los tickets");
+        const blob = await resp.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "tickets.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="container mt-5">
             <h2>Panel de Administración</h2>
             {error && <div className="alert alert-danger">{error}</div>}
 
-            <h4 className="mt-4">Gestión de Inventario</h4>
+            {/* Sección de gestión de usuarios */}
+            <h4 className="mt-4">Gestión de Usuarios</h4>
+            <form className="mb-3" onSubmit={handleUserCreate} style={{ maxWidth: 400 }}>
+                <div className="mb-2">
+                    <input type="text" className="form-control" name="username" placeholder="Usuario" value={userForm.username} onChange={handleUserChange} />
+                </div>
+                <div className="mb-2">
+                    <input type="password" className="form-control" name="password" placeholder="Contraseña" value={userForm.password} onChange={handleUserChange} />
+                </div>
+                <div className="mb-2">
+                    <select className="form-select" name="role" value={userForm.role} onChange={handleUserChange}>
+                        <option value="usuario">Usuario</option>
+                        <option value="tecnico">Técnico</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <button className="btn btn-primary btn-sm" type="submit">Crear usuario</button>
+                {userMsg && <div className="mt-2 alert alert-info py-1">{userMsg}</div>}
+            </form>
+            <div className="table-responsive">
+                <table className="table table-bordered table-sm">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {users.map(u => (
+                            <tr key={u.username}>
+                                <td>{u.username}</td>
+                                <td>
+                                    {editUser === u.username ? (
+                                        <select className="form-select form-select-sm" name="role" value={editUserForm.role} onChange={handleEditUserChange}>
+                                            <option value="usuario">Usuario</option>
+                                            <option value="tecnico">Técnico</option>
+                                            <option value="admin">Administrador</option>
+                                        </select>
+                                    ) : (
+                                        u.role
+                                    )}
+                                </td>
+                                <td>
+                                    {u.username !== "Levi" && (
+                                        editUser === u.username ? (
+                                            <>
+                                                <input
+                                                    type="password"
+                                                    className="form-control form-control-sm d-inline-block w-auto me-2"
+                                                    name="password"
+                                                    placeholder="Nueva contraseña"
+                                                    value={editUserForm.password}
+                                                    onChange={handleEditUserChange}
+                                                />
+                                                <button className="btn btn-success btn-sm me-1" onClick={() => handleEditUserSave(u.username)}>
+                                                    Guardar
+                                                </button>
+                                                <button className="btn btn-secondary btn-sm" onClick={() => setEditUser(null)}>
+                                                    Cancelar
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button className="btn btn-warning btn-sm me-1" onClick={() => handleEditUser(u)}>
+                                                    Editar
+                                                </button>
+                                                <button className="btn btn-danger btn-sm" onClick={() => handleUserDelete(u.username)}>
+                                                    Eliminar
+                                                </button>
+                                            </>
+                                        )
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <h4 className="mt-5">Gestión de Inventario</h4>
+            <button className="btn btn-success mb-3" onClick={handleExportInventario}>
+                Descargar Inventario Excel
+            </button>
             <div className="table-responsive">
                 <table className="table table-bordered table-striped mt-3">
                     <thead>
@@ -142,6 +387,9 @@ export const Admin = () => {
             </div>
 
             <h4 className="mt-5">Gestión de Tickets</h4>
+            <button className="btn btn-success mb-3" onClick={handleExportTickets}>
+                Descargar Tickets Excel
+            </button>
             <div className="table-responsive">
                 <table className="table table-bordered table-striped mt-3">
                     <thead>

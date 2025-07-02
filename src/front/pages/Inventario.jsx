@@ -26,9 +26,31 @@ export const Inventario = () => {
         fetchArticulos();
     }, []);
 
+    const handleExport = async () => {
+        let backendUrl = import.meta.env.VITE_BACKEND_URL;
+        if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
+        const token = localStorage.getItem("token");
+        const resp = await fetch(`${backendUrl}/api/items/export`, {
+            headers: { "Authorization": "Bearer " + token }
+        });
+        if (!resp.ok) return alert("No se pudo descargar el inventario");
+        const blob = await resp.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "inventario.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="container mt-5">
             <h2>Inventario de Artículos</h2>
+            <button className="btn btn-success mb-3" onClick={handleExport}>
+                Descargar Excel
+            </button>
             {error && <div className="alert alert-danger">{error}</div>}
             {articulos.length === 0 && !error && (
                 <p>No hay artículos en el inventario.</p>

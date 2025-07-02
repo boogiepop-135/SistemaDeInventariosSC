@@ -10,6 +10,9 @@ import jwt
 from flask import current_app
 from werkzeug.security import check_password_hash, generate_password_hash
 import pytz
+import pandas as pd
+from flask import send_file
+from io import BytesIO
 
 api = Blueprint('api', __name__)
 
@@ -274,9 +277,58 @@ def delete_user(username):
     return jsonify({"msg": f"Usuario {username} eliminado"}), 200
 
 
+@api.route('/users', methods=['GET'])
+@jwt_required_role(["admin"])
+def list_users():
+    # Devuelve los usuarios del diccionario en memoria
+    return jsonify([
+        {"username": k, "role": v["role"]}
+        for k, v in valid_users.items()
+    ]), 200
+
+
+@api.route('/users/<username>', methods=['PUT'])
+@jwt_required_role(["admin"])
+def edit_user(username):
+    data = request.json
+    if username not in valid_users:
+        return jsonify({"msg": "Usuario no encontrado"}), 404
+    if username == "Levi" and data.get("role") and data.get("role") != "admin":
+        return jsonify({"msg": "No puedes cambiar el rol del administrador principal"}), 403
+    if data.get("password"):
+        valid_users[username]["password"] = generate_password_hash(
+            data["password"])
+    if data.get("role"):
+        valid_users[username]["role"] = data["role"]
+    return jsonify({"msg": f"Usuario {username} actualizado"}), 200
+
+
 # Ejemplo de uso:
 @api.route('/admin-only', methods=['GET'])
 @jwt_required_role(["admin"])
 def admin_only():
     return jsonify({"msg": "Solo admins pueden ver esto"}), 200
-    return jsonify({"msg": "Solo admins pueden ver esto"}), 200
+
+
+@api.route('/items/export', methods=['GET'])
+@jwt_required
+def export_items_excel():
+    items = Item.query.all()
+    data = [item.serialize() for item in items]
+    df = pd.DataFrame(data)
+    output = BytesIO()
+    df.to_excel(output, index=False, engine='openpyxl')
+    output.seek(0)
+    return send_file(output, download_name="inventario.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@api.route('/tickets/export', methods=['GET'])
+@jwt_required
+def export_tickets_excel():
+    tickets = Ticket.query.all()
+    data = [ticket.serialize() for ticket in tickets]
+    df = pd.DataFrame(data)
+    output = BytesIO()
+    df.to_excel(output, index=False, engine='openpyxl')
+    output.seek(0)
+    return send_file(output, download_name="tickets.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
