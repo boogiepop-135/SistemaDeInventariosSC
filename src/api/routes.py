@@ -245,6 +245,35 @@ def delete_ticket(ticket_id):
     return jsonify({"msg": "Ticket deleted"}), 200
 
 
+@api.route('/users', methods=['POST'])
+@jwt_required_role(["admin"])
+def create_user():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
+    role = data.get("role", "usuario")
+    if not username or not password:
+        return jsonify({"msg": "Usuario y contraseña requeridos"}), 400
+    if username in valid_users:
+        return jsonify({"msg": "El usuario ya existe"}), 400
+    valid_users[username] = {
+        "password": generate_password_hash(password),
+        "role": role
+    }
+    return jsonify({"msg": "Usuario creado", "username": username, "role": role}), 201
+
+
+@api.route('/users/<username>', methods=['DELETE'])
+@jwt_required_role(["admin"])
+def delete_user(username):
+    if username not in valid_users:
+        return jsonify({"msg": "Usuario no encontrado"}), 404
+    if username == "Levi":
+        return jsonify({"msg": "No puedes borrar al administrador principal"}), 403
+    del valid_users[username]
+    return jsonify({"msg": f"Usuario {username} eliminado"}), 200
+
+
 # Ejemplo de uso:
 @api.route('/admin-only', methods=['GET'])
 @jwt_required_role(["admin"])
