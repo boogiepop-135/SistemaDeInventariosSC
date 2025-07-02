@@ -140,7 +140,7 @@ def create_item():
 
 
 @api.route('/items/<int:item_id>', methods=['PUT'])
-@jwt_required
+@jwt_required_role(["admin"])
 def update_item(item_id):
     item = Item.query.get(item_id)
     if not item:
@@ -210,7 +210,7 @@ def create_ticket():
 
 
 @api.route('/tickets/<int:ticket_id>', methods=['PUT'])
-@jwt_required
+@jwt_required_role(["admin"])
 def update_ticket(ticket_id):
     ticket = Ticket.query.get(ticket_id)
     if not ticket:
