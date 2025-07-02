@@ -1,8 +1,16 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export const Navbar = () => {
 	const location = useLocation();
+	const navigate = useNavigate();
 	const role = localStorage.getItem("role");
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("role");
+		navigate("/login");
+	};
+
 	return (
 		<nav className="navbar navbar-expand bg-light border-bottom mb-4">
 			<div className="container justify-content-center">
@@ -24,6 +32,13 @@ export const Navbar = () => {
 					{role === "admin" && (
 						<li className="nav-item">
 							<Link to="/admin" className="nav-link">Panel Admin</Link>
+						</li>
+					)}
+					{role && (
+						<li className="nav-item">
+							<button className="btn btn-outline-danger ms-3" onClick={handleLogout}>
+								Cerrar sesión
+							</button>
 						</li>
 					)}
 				</ul>
