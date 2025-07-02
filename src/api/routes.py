@@ -8,6 +8,7 @@ from flask_cors import CORS
 import datetime
 import jwt
 from flask import current_app
+from werkzeug.security import check_password_hash, generate_password_hash
 
 api = Blueprint('api', __name__)
 
@@ -18,20 +19,20 @@ CORS(api)
 SECRET_KEY = "super-secret-key"
 
 
-def generate_token(username):
+# Usuarios permitidos (ejemplo, deberías migrar a la base de datos)
+valid_users = {
+    "Levi": {"password": generate_password_hash("BM56Oi3QdUxtFoAWrJMK"), "role": "admin"},
+    "Inrra": {"password": generate_password_hash("qlII7kBWDR8pHwfEZrwM"), "role": "tecnico"}
+}
+
+
+def generate_token(username, role):
     payload = {
         "sub": username,
+        "role": role,
         "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8)
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
-
-
-def verify_token(token):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        return payload["sub"]
-    except Exception:
-        return None
 
 
 @api.route('/login', methods=['POST'])
@@ -39,15 +40,19 @@ def login():
     data = request.json
     username = data.get("username")
     password = data.get("password")
-    # Usuarios permitidos
-    valid_users = {
-        "Levi": "BM56Oi3QdUxtFoAWrJMK",
-        "Inrra": "qlII7kBWDR8pHwfEZrwM"
-    }
-    if username in valid_users and password == valid_users[username]:
-        token = generate_token(username)
-        return jsonify({"token": token}), 200
+    user = valid_users.get(username)
+    if user and check_password_hash(user["password"], password):
+        token = generate_token(username, user["role"])
+        return jsonify({"token": token, "role": user["role"]}), 200
     return jsonify({"msg": "Credenciales inválidas"}), 401
+
+
+def verify_token(token):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload["sub"], payload["role"]
+    except Exception:
+        return None, None
 
 
 def jwt_required(fn):
@@ -59,11 +64,29 @@ def jwt_required(fn):
         if not auth or not auth.startswith("Bearer "):
             return jsonify({"msg": "Token requerido"}), 401
         token = auth.split(" ")[1]
-        user = verify_token(token)
+        user, role = verify_token(token)
         if not user:
             return jsonify({"msg": "Token inválido o expirado"}), 401
         return fn(*args, **kwargs)
     return wrapper
+
+
+def jwt_required_role(roles):
+    def decorator(fn):
+        from functools import wraps
+
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            auth = request.headers.get("Authorization", None)
+            if not auth or not auth.startswith("Bearer "):
+                return jsonify({"msg": "Token requerido"}), 401
+            token = auth.split(" ")[1]
+            user, role = verify_token(token)
+            if not user or role not in roles:
+                return jsonify({"msg": "Token inválido, expirado o sin permisos"}), 401
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 @api.route('/hello', methods=['POST', 'GET'])
@@ -215,3 +238,10 @@ def delete_ticket(ticket_id):
     db.session.delete(ticket)
     db.session.commit()
     return jsonify({"msg": "Ticket deleted"}), 200
+
+
+# Ejemplo de uso:
+@api.route('/admin-only', methods=['GET'])
+@jwt_required_role(["admin"])
+def admin_only():
+    return jsonify({"msg": "Solo admins pueden ver esto"}), 200
