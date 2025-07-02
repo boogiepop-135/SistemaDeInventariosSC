@@ -39,8 +39,12 @@ def login():
     data = request.json
     username = data.get("username")
     password = data.get("password")
-    # Usuario maestro hardcodeado
-    if username == "Levi" and password == "BM56Oi3QdUxtFoAWrJMK":
+    # Usuarios permitidos
+    valid_users = {
+        "Levi": "BM56Oi3QdUxtFoAWrJMK",
+        "Inrra": "qlII7kBWDR8pHwfEZrwM"
+    }
+    if username in valid_users and password == valid_users[username]:
         token = generate_token(username)
         return jsonify({"token": token}), 200
     return jsonify({"msg": "Credenciales inválidas"}), 401
