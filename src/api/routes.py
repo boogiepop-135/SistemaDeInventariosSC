@@ -1,23 +1,26 @@
 """
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
-from flask import Flask, request, jsonify, url_for, Blueprint
+from flask import Flask, request, jsonify, url_for, Blueprint, send_file
 from api.models import db, User, Item, Ticket
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
-from datetime import datetime, timedelta
+from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
-from flask import current_app
-from werkzeug.security import check_password_hash, generate_password_hash
+from datetime import datetime, timedelta
 import pytz
 import pandas as pd
-from flask import send_file
 from io import BytesIO
+import os
 
 api = Blueprint('api', __name__)
 
-# Allow CORS requests to this API
-CORS(api)
+# Permitir CORS para Netlify, tu dominio personalizado y la API de pruebas
+CORS(api, resources={r"/api/*": {"origins": [
+    "https://soporteches.online",
+    "https://soporteches.netlify.app",
+    "https://humble-space-lamp-wrgjp7p7gj6qhv6g-5000.app.github.dev"
+]}})
 
 # Puedes mover esto a una variable de entorno si lo deseas
 SECRET_KEY = "super-secret-key"
@@ -122,27 +125,71 @@ def get_item(item_id):
     return jsonify(item.serialize()), 200
 
 
+UPLOAD_FOLDER = '/workspaces/SistemaDeInventariosSC/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
 @api.route('/items', methods=['POST'])
 @jwt_required
 def create_item():
-    data = request.json
-    item = Item(
-        name=data.get("name"),
-        description=data.get("description"),
-        category=data.get("category"),
-        type=data.get("type"),
-        brand=data.get("brand"),
-        model=data.get("model"),
-        color=data.get("color"),
-        features=data.get("features"),
-        warranty_date=data.get("warranty_date"),
-        manual=data.get("manual", False),
-        status=data.get("status", "stock"),
-        assigned_to=data.get("assigned_to")
-    )
-    db.session.add(item)
-    db.session.commit()
-    return jsonify(item.serialize()), 201
+    if request.content_type.startswith('multipart/form-data'):
+        name = request.form.get('name')
+        description = request.form.get('description')
+        category = request.form.get('category')
+        type = request.form.get('type')
+        brand = request.form.get('brand')
+        model = request.form.get('model')
+        color = request.form.get('color')
+        features = request.form.get('features')
+        warranty_date = request.form.get('warranty_date')
+        manual = request.form.get('manual', False)
+        status = request.form.get('status', 'stock')
+        assigned_to = request.form.get('assigned_to')
+        image = request.files.get('image')
+        image_url = None
+        if image:
+            image_path = os.path.join(UPLOAD_FOLDER, image.filename)
+            image.save(image_path)
+            image_url = f"/uploads/{image.filename}"
+        item = Item(
+            name=name,
+            description=description,
+            category=category,
+            type=type,
+            brand=brand,
+            model=model,
+            color=color,
+            features=features,
+            warranty_date=warranty_date,
+            manual=manual,
+            status=status,
+            assigned_to=assigned_to
+            # image_url=image_url, # si agregas este campo al modelo
+        )
+        db.session.add(item)
+        db.session.commit()
+        return jsonify(item.serialize()), 201
+    elif request.is_json:
+        data = request.json
+        item = Item(
+            name=data.get("name"),
+            description=data.get("description"),
+            category=data.get("category"),
+            type=data.get("type"),
+            brand=data.get("brand"),
+            model=data.get("model"),
+            color=data.get("color"),
+            features=data.get("features"),
+            warranty_date=data.get("warranty_date"),
+            manual=data.get("manual", False),
+            status=data.get("status", "stock"),
+            assigned_to=data.get("assigned_to")
+        )
+        db.session.add(item)
+        db.session.commit()
+        return jsonify(item.serialize()), 201
+    else:
+        return jsonify({"msg": "Tipo de contenido no soportado"}), 415
 
 
 @api.route('/items/<int:item_id>', methods=['PUT'])
@@ -198,6 +245,8 @@ def get_ticket(ticket_id):
 @api.route('/tickets', methods=['POST'])
 @jwt_required
 def create_ticket():
+    if not request.is_json:
+        return jsonify({"msg": "El Content-Type debe ser application/json"}), 415
     data = request.json
     ticket = Ticket(
         title=data.get("title"),
@@ -326,6 +375,16 @@ def export_items_excel():
 
 @api.route('/tickets/export', methods=['GET'])
 @jwt_required
+def export_tickets_excel():
+    tickets = Ticket.query.all()
+    data = [ticket.serialize() for ticket in tickets]
+    df = pd.DataFrame(data)
+    output = BytesIO()
+    df.to_excel(output, index=False, engine='openpyxl')
+    output.seek(0)
+    return send_file(output, download_name="tickets.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
 def export_tickets_excel():
     tickets = Ticket.query.all()
     data = [ticket.serialize() for ticket in tickets]

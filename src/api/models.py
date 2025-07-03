@@ -3,6 +3,7 @@ from sqlalchemy import String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
 import pytz
+import os
 
 db = SQLAlchemy()
 
@@ -133,3 +134,6 @@ class Ticket(db.Model):
             "created_at": self.created_at or datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S"),
             "incident_type": self.incident_type,
         }
+
+# En tu app principal (ejemplo src/app.py):
+# app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
