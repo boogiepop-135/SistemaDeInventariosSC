@@ -3,25 +3,27 @@ import React, { useState } from "react";
 const sucursales = ["matriz", "juriquilla", "centro sur"];
 const departamentos = ["cedis", "cepro", "piso"];
 const prioridades = ["normal", "urgente", "critico"];
-const estados = ["pendiente", "solucionado"];
+const incidentTypes = [
+    "punto de venta", "celular", "laptop", "conexion a internet", "correo", "inventory", "uber"
+];
 
 export const CrearTicket = () => {
     const [form, setForm] = useState({
-        title: "",
-        description: "",
-        item_id: "",
-        status: "pendiente",
+        status: "pendiente", // siempre pendiente al crear
         created_by: "",
         branch: "",
         department: "",
         priority: "normal",
-        comments: ""
+        comments: "",
+        incident_type: ""
     });
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
     const handleChange = e => {
         const { name, value } = e.target;
+        // No permitir cambiar status desde el formulario
+        if (name === "status") return;
         setForm({
             ...form,
             [name]: value
@@ -32,7 +34,7 @@ export const CrearTicket = () => {
         e.preventDefault();
         setError("");
         setSuccess("");
-        const required = ["title", "branch", "department", "priority", "status"];
+        const required = ["branch", "department", "priority", "incident_type"];
         for (let field of required) {
             if (!form[field]) {
                 setError(`Falta el campo requerido: ${field}`);
@@ -40,7 +42,7 @@ export const CrearTicket = () => {
             }
         }
         try {
-            let backendUrl = import.meta.env.VITE_BACKEND_URL;
+            let backendUrl = import.meta.env.VITE_BACKEND_URL || "https://humble-space-lamp-wrgjp7p7gj6qhv6g-5000.app.github.dev";
             if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
             const url = `${backendUrl}/api/tickets`;
             const token = localStorage.getItem("token");
@@ -50,27 +52,23 @@ export const CrearTicket = () => {
                     "Content-Type": "application/json",
                     "Authorization": "Bearer " + token
                 },
-                body: JSON.stringify({
-                    ...form,
-                    item_id: form.item_id ? parseInt(form.item_id) : null
-                })
+                body: JSON.stringify({ ...form, status: "pendiente" })
             });
             if (!resp.ok) {
-                const data = await resp.json();
+                let data = {};
+                try { data = await resp.json(); } catch { }
                 setError(data.message || "Error al crear ticket");
                 return;
             }
             setSuccess("Ticket creado correctamente");
             setForm({
-                title: "",
-                description: "",
-                item_id: "",
                 status: "pendiente",
                 created_by: "",
                 branch: "",
                 department: "",
                 priority: "normal",
-                comments: ""
+                comments: "",
+                incident_type: ""
             });
         } catch (err) {
             setError("Error de conexión con el backend");
@@ -81,18 +79,6 @@ export const CrearTicket = () => {
         <div className="container mt-5">
             <h2>Crear Ticket</h2>
             <form onSubmit={handleSubmit} className="mt-4">
-                <div className="mb-3">
-                    <label className="form-label">Título *</label>
-                    <input type="text" className="form-control" name="title" value={form.title} onChange={handleChange} />
-                </div>
-                <div className="mb-3">
-                    <label className="form-label">Descripción</label>
-                    <textarea className="form-control" name="description" value={form.description} onChange={handleChange} />
-                </div>
-                <div className="mb-3">
-                    <label className="form-label">ID de Artículo relacionado</label>
-                    <input type="number" className="form-control" name="item_id" value={form.item_id} onChange={handleChange} />
-                </div>
                 <div className="mb-3">
                     <label className="form-label">Sucursal *</label>
                     <select className="form-select" name="branch" value={form.branch} onChange={handleChange}>
@@ -114,9 +100,12 @@ export const CrearTicket = () => {
                     </select>
                 </div>
                 <div className="mb-3">
-                    <label className="form-label">Estado *</label>
-                    <select className="form-select" name="status" value={form.status} onChange={handleChange}>
-                        {estados.map(e => <option key={e} value={e}>{e}</option>)}
+                    <label className="form-label">Tipo de incidencia *</label>
+                    <select className="form-select" name="incident_type" value={form.incident_type} onChange={handleChange}>
+                        <option value="">Selecciona tipo</option>
+                        {incidentTypes.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                        ))}
                     </select>
                 </div>
                 <div className="mb-3">

@@ -30,6 +30,7 @@ export const Login = () => {
             }
             localStorage.setItem("token", data.token);
             localStorage.setItem("role", data.role);
+            localStorage.setItem("username", form.username);
             navigate("/inventario");
         } catch {
             setError("Error de conexión con el backend");
@@ -54,3 +55,4 @@ export const Login = () => {
         </div>
     );
 };
+ 

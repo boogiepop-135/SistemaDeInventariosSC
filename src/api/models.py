@@ -115,6 +115,8 @@ class Ticket(db.Model):
     comments: Mapped[str] = mapped_column(String(255), nullable=True)
     created_at: Mapped[str] = mapped_column(String(30), nullable=False, default=lambda: datetime.now(
         pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S"))
+    # punto de venta, celular, laptop, etc.
+    incident_type: Mapped[str] = mapped_column(String(50), nullable=True)
 
     def serialize(self):
         return {
@@ -128,5 +130,6 @@ class Ticket(db.Model):
             "department": self.department,
             "priority": self.priority,
             "comments": self.comments,
-            "created_at": self.created_at or datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+            "created_at": self.created_at or datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S"),
+            "incident_type": self.incident_type,
         }

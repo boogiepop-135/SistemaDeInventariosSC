@@ -13,6 +13,7 @@ export const Admin = () => {
     const [editUserForm, setEditUserForm] = useState({ password: "", role: "usuario" });
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
+    const currentUser = localStorage.getItem("username");
     let backendUrl = import.meta.env.VITE_BACKEND_URL;
     if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
 
@@ -271,6 +272,7 @@ export const Admin = () => {
                         <tr>
                             <th>Usuario</th>
                             <th>Rol</th>
+                            <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -278,16 +280,19 @@ export const Admin = () => {
                         {users.map(u => (
                             <tr key={u.username}>
                                 <td>{u.username}</td>
+                                <td>{u.role}</td>
                                 <td>
-                                    {editUser === u.username ? (
-                                        <select className="form-select form-select-sm" name="role" value={editUserForm.role} onChange={handleEditUserChange}>
-                                            <option value="usuario">Usuario</option>
-                                            <option value="tecnico">Técnico</option>
-                                            <option value="admin">Administrador</option>
-                                        </select>
-                                    ) : (
-                                        u.role
-                                    )}
+                                    <span
+                                        title={u.username === currentUser ? "Activo" : "Inactivo"}
+                                        style={{
+                                            display: "inline-block",
+                                            width: 12,
+                                            height: 12,
+                                            borderRadius: "50%",
+                                            background: u.username === currentUser ? "#28a745" : "#dc3545",
+                                            border: "1px solid #888"
+                                        }}
+                                    ></span>
                                 </td>
                                 <td>
                                     {u.username !== "Levi" && (

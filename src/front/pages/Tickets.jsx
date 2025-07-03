@@ -26,31 +26,9 @@ export const Tickets = () => {
         fetchTickets();
     }, []);
 
-    const handleExport = async () => {
-        let backendUrl = import.meta.env.VITE_BACKEND_URL;
-        if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
-        const token = localStorage.getItem("token");
-        const resp = await fetch(`${backendUrl}/api/tickets/export`, {
-            headers: { "Authorization": "Bearer " + token }
-        });
-        if (!resp.ok) return alert("No se pudo descargar los tickets");
-        const blob = await resp.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "tickets.xlsx";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-    };
-
     return (
         <div className="container mt-5">
             <h2>Estado de Tickets</h2>
-            <button className="btn btn-success mb-3" onClick={handleExport}>
-                Descargar Excel
-            </button>
             {error && <div className="alert alert-danger">{error}</div>}
             {tickets.length === 0 && !error && (
                 <p>No hay tickets registrados.</p>
@@ -61,6 +39,7 @@ export const Tickets = () => {
                         <thead>
                             <tr>
                                 <th>Título</th>
+                                <th>Tipo Incidencia</th>
                                 <th>Estado</th>
                                 <th>Prioridad</th>
                                 <th>Sucursal</th>
@@ -75,6 +54,7 @@ export const Tickets = () => {
                             {tickets.map(ticket => (
                                 <tr key={ticket.id}>
                                     <td>{ticket.title}</td>
+                                    <td>{ticket.incident_type}</td>
                                     <td>
                                         {ticket.status === "solucionado"
                                             ? <span className="badge bg-success">Resuelto</span>

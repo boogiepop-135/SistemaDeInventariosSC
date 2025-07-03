@@ -6,10 +6,7 @@ const tipos = [
 
 export const AgregarInventario = () => {
     const [form, setForm] = useState({
-        name: "",
-        description: "",
         category: "",
-        type: "",
         brand: "",
         model: "",
         color: "",
@@ -40,7 +37,7 @@ export const AgregarInventario = () => {
         e.preventDefault();
         setError("");
         setSuccess("");
-        const required = ["name", "type", "category"];
+        const required = [/*"name", "type",*/ "category"];
         for (let field of required) {
             if (!form[field]) {
                 setError(`Falta el campo requerido: ${field}`);
@@ -52,13 +49,25 @@ export const AgregarInventario = () => {
             if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
             const url = `${backendUrl}/api/items`;
             const token = localStorage.getItem("token");
+
+            // Obtener fecha y hora de México Central
+            const now = new Date();
+            const mxTime = now.toLocaleString("sv-SE", { timeZone: "America/Mexico_City" }).replace(" ", "T");
+            // Formato: "YYYY-MM-DDTHH:mm:ss"
+            // Si tu backend espera solo fecha, usa mxTime.split("T")[0]
+
+            const dataToSend = {
+                ...form,
+                created_at: mxTime
+            };
+
             const resp = await fetch(url, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": "Bearer " + token
                 },
-                body: JSON.stringify(form)
+                body: JSON.stringify(dataToSend)
             });
             if (!resp.ok) {
                 const data = await resp.json();
@@ -67,10 +76,7 @@ export const AgregarInventario = () => {
             }
             setSuccess("Artículo agregado correctamente");
             setForm({
-                name: "",
-                description: "",
                 category: "",
-                type: "",
                 brand: "",
                 model: "",
                 color: "",
@@ -95,14 +101,14 @@ export const AgregarInventario = () => {
         <div className="container mt-5">
             <h2>Agregar al Inventario</h2>
             <form onSubmit={handleSubmit} className="mt-4">
-                <div className="mb-3">
+                {/* <div className="mb-3">
                     <label className="form-label">Nombre *</label>
                     <input type="text" className="form-control" name="name" value={form.name} onChange={handleChange} />
                 </div>
                 <div className="mb-3">
                     <label className="form-label">Descripción</label>
                     <input type="text" className="form-control" name="description" value={form.description} onChange={handleChange} />
-                </div>
+                </div> */}
                 <div className="mb-3">
                     <label className="form-label">Categoría *</label>
                     <select className="form-select" name="category" value={form.category} onChange={handleChange}>
@@ -120,17 +126,19 @@ export const AgregarInventario = () => {
                         <option value="DVR/NVR">DVR/NVR</option>
                         <option value="POS">POS</option>
                         <option value="Tablet">Tablet</option>
+                        <option value="Teléfono móvil">Teléfono móvil</option>
                         <option value="Software">Software</option>
                         <option value="Correo">Correo</option>
                     </select>
                 </div>
-                <div className="mb-3">
+                {/* <div className="mb-3">
                     <label className="form-label">Tipo *</label>
                     <select className="form-select" name="type" value={form.type} onChange={handleChange}>
                         <option value="">Selecciona tipo</option>
                         {tipos.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
-                </div>
+                </div> */}
+                {/* ...resto del formulario... */}
                 <div className="mb-3">
                     <label className="form-label">Marca</label>
                     <input type="text" className="form-control" name="brand" value={form.brand} onChange={handleChange} />
@@ -176,7 +184,7 @@ export const AgregarInventario = () => {
                     <label className="form-label">Área</label>
                     <input type="text" className="form-control" name="area" value={form.area} onChange={handleChange} />
                 </div>
-                <div className="mb-3">
+                {/* <div className="mb-3">
                     <label className="form-label">Problemas recurrentes</label>
                     <input type="text" className="form-control" name="recurring_issues" value={form.recurring_issues} onChange={handleChange} />
                 </div>
@@ -191,7 +199,7 @@ export const AgregarInventario = () => {
                 <div className="mb-3">
                     <label className="form-label">Tiempo de soporte</label>
                     <input type="text" className="form-control" name="support_time" value={form.support_time} onChange={handleChange} />
-                </div>
+                </div> */}
                 {error && <div className="alert alert-danger">{error}</div>}
                 {success && <div className="alert alert-success">{success}</div>}
                 <button type="submit" className="btn btn-primary">Agregar</button>
@@ -199,3 +207,4 @@ export const AgregarInventario = () => {
         </div>
     );
 };
+<button type="submit" className="btn btn-primary">Agregar</button>

@@ -209,6 +209,7 @@ def create_ticket():
         department=data.get("department"),
         priority=data.get("priority", "normal"),
         comments=data.get("comments"),
+        incident_type=data.get("incident_type"),
         created_at=datetime.now(pytz.timezone(
             "America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
     )
@@ -233,6 +234,7 @@ def update_ticket(ticket_id):
     ticket.department = data.get("department", ticket.department)
     ticket.priority = data.get("priority", ticket.priority)
     ticket.comments = data.get("comments", ticket.comments)
+    ticket.incident_type = data.get("incident_type", ticket.incident_type)
     db.session.commit()
     return jsonify(ticket.serialize()), 200
 
