@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 
 const tipos = [
     "laptop", "pc", "monitor", "proyector", "control", "cable hdmi", "display port", "periferico mouse o teclado"
@@ -24,13 +24,28 @@ export const AgregarInventario = () => {
     });
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [image, setImage] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const fileInputRef = useRef();
 
     const handleChange = e => {
-        const { name, value, type: inputType, checked } = e.target;
+        const { name, value, type: inputType, checked, files } = e.target;
+        if (name === "image" && files && files[0]) {
+            setImage(files[0]);
+            setPreview(URL.createObjectURL(files[0]));
+            return;
+        }
         setForm({
             ...form,
             [name]: inputType === "checkbox" ? checked : value
         });
+    };
+
+    const handleCapture = e => {
+        if (e.target.files && e.target.files[0]) {
+            setImage(e.target.files[0]);
+            setPreview(URL.createObjectURL(e.target.files[0]));
+        }
     };
 
     const handleSubmit = async e => {
@@ -53,21 +68,26 @@ export const AgregarInventario = () => {
             // Obtener fecha y hora de México Central
             const now = new Date();
             const mxTime = now.toLocaleString("sv-SE", { timeZone: "America/Mexico_City" }).replace(" ", "T");
-            // Formato: "YYYY-MM-DDTHH:mm:ss"
-            // Si tu backend espera solo fecha, usa mxTime.split("T")[0]
 
             const dataToSend = {
                 ...form,
                 created_at: mxTime
             };
 
+            const formData = new FormData();
+            Object.entries(dataToSend).forEach(([key, value]) => {
+                formData.append(key, value);
+            });
+            if (image) {
+                formData.append("image", image);
+            }
+
             const resp = await fetch(url, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
                     "Authorization": "Bearer " + token
                 },
-                body: JSON.stringify(dataToSend)
+                body: formData
             });
             if (!resp.ok) {
                 const data = await resp.json();
@@ -92,6 +112,9 @@ export const AgregarInventario = () => {
                 support_person: "",
                 support_time: ""
             });
+            setImage(null);
+            setPreview(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
         } catch (err) {
             setError("Error de conexión con el backend");
         }
@@ -100,7 +123,7 @@ export const AgregarInventario = () => {
     return (
         <div className="container mt-5">
             <h2>Agregar al Inventario</h2>
-            <form onSubmit={handleSubmit} className="mt-4">
+            <form onSubmit={handleSubmit} className="mt-4" encType="multipart/form-data">
                 {/* <div className="mb-3">
                     <label className="form-label">Nombre *</label>
                     <input type="text" className="form-control" name="name" value={form.name} onChange={handleChange} />
@@ -200,6 +223,23 @@ export const AgregarInventario = () => {
                     <label className="form-label">Tiempo de soporte</label>
                     <input type="text" className="form-control" name="support_time" value={form.support_time} onChange={handleChange} />
                 </div> */}
+                <div className="mb-3">
+                    <label className="form-label">Foto del artículo</label>
+                    <input
+                        type="file"
+                        className="form-control"
+                        name="image"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleChange}
+                        ref={fileInputRef}
+                    />
+                    {preview && (
+                        <div className="mt-2">
+                            <img src={preview} alt="preview" style={{ maxWidth: 200, maxHeight: 200 }} />
+                        </div>
+                    )}
+                </div>
                 {error && <div className="alert alert-danger">{error}</div>}
                 {success && <div className="alert alert-success">{success}</div>}
                 <button type="submit" className="btn btn-primary">Agregar</button>
@@ -207,4 +247,3 @@ export const AgregarInventario = () => {
         </div>
     );
 };
-<button type="submit" className="btn btn-primary">Agregar</button>
