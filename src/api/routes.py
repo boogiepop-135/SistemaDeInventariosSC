@@ -136,17 +136,25 @@ def create_item():
         name = request.form.get('name')
         description = request.form.get('description')
         category = request.form.get('category')
-        type = request.form.get('type')
+        type_ = request.form.get('type')
         brand = request.form.get('brand')
         model = request.form.get('model')
         color = request.form.get('color')
         features = request.form.get('features')
         warranty_date = request.form.get('warranty_date')
         manual = request.form.get('manual', False)
+        # Convertir manual a booleano
+        if isinstance(manual, str):
+            manual = manual.lower() == 'true'
+        else:
+            manual = bool(manual)
         status = request.form.get('status', 'stock')
         assigned_to = request.form.get('assigned_to')
         image = request.files.get('image')
         image_url = None
+        # Validar campos obligatorios
+        if not name or not category or not type_:
+            return jsonify({"msg": "Faltan campos obligatorios: name, category, type"}), 400
         if image:
             image_path = os.path.join(UPLOAD_FOLDER, image.filename)
             image.save(image_path)
@@ -155,7 +163,7 @@ def create_item():
             name=name,
             description=description,
             category=category,
-            type=type,
+            type=type_,
             brand=brand,
             model=model,
             color=color,
@@ -171,17 +179,29 @@ def create_item():
         return jsonify(item.serialize()), 201
     elif request.is_json:
         data = request.json
+        name = data.get("name")
+        category = data.get("category")
+        type_ = data.get("type")
+        # Validar campos obligatorios
+        if not name or not category or not type_:
+            return jsonify({"msg": "Faltan campos obligatorios: name, category, type"}), 400
+        manual = data.get("manual", False)
+        # Convertir manual a booleano
+        if isinstance(manual, str):
+            manual = manual.lower() == 'true'
+        else:
+            manual = bool(manual)
         item = Item(
-            name=data.get("name"),
+            name=name,
+            category=category,
+            type=type_,
+            manual=manual,
             description=data.get("description"),
-            category=data.get("category"),
-            type=data.get("type"),
             brand=data.get("brand"),
             model=data.get("model"),
             color=data.get("color"),
             features=data.get("features"),
             warranty_date=data.get("warranty_date"),
-            manual=data.get("manual", False),
             status=data.get("status", "stock"),
             assigned_to=data.get("assigned_to")
         )
