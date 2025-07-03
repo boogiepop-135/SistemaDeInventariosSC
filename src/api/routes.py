@@ -15,11 +15,10 @@ import os
 
 api = Blueprint('api', __name__)
 
-# Permitir CORS para Netlify, tu dominio personalizado y la API de pruebas
+# Permitir CORS solo para Netlify y tu dominio personalizado
 CORS(api, resources={r"/api/*": {"origins": [
     "https://soporteches.online",
-    "https://soporteches.netlify.app",
-    "https://humble-space-lamp-wrgjp7p7gj6qhv6g-5000.app.github.dev"
+    "https://soporteches.netlify.app"
 ]}})
 
 # Puedes mover esto a una variable de entorno si lo deseas
@@ -125,10 +124,6 @@ def get_item(item_id):
     return jsonify(item.serialize()), 200
 
 
-UPLOAD_FOLDER = '/workspaces/SistemaDeInventariosSC/uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-
 @api.route('/items', methods=['POST'])
 @jwt_required
 def create_item():
@@ -150,15 +145,9 @@ def create_item():
             manual = bool(manual)
         status = request.form.get('status', 'stock')
         assigned_to = request.form.get('assigned_to')
-        image = request.files.get('image')
-        image_url = None
         # Validar campos obligatorios
         if not name or not category or not type_:
             return jsonify({"msg": "Faltan campos obligatorios: name, category, type"}), 400
-        if image:
-            image_path = os.path.join(UPLOAD_FOLDER, image.filename)
-            image.save(image_path)
-            image_url = f"/uploads/{image.filename}"
         item = Item(
             name=name,
             description=description,
@@ -172,7 +161,6 @@ def create_item():
             manual=manual,
             status=status,
             assigned_to=assigned_to
-            # image_url=image_url, # si agregas este campo al modelo
         )
         db.session.add(item)
         db.session.commit()
@@ -401,6 +389,18 @@ def export_tickets_excel():
     df = pd.DataFrame(data)
     output = BytesIO()
     df.to_excel(output, index=False, engine='openpyxl')
+    output.seek(0)
+    return send_file(output, download_name="tickets.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def export_tickets_excel():
+    tickets = Ticket.query.all()
+    data = [ticket.serialize() for ticket in tickets]
+    df = pd.DataFrame(data)
+    output = BytesIO()
+    df.to_excel(output, index=False, engine='openpyxl')
+    output.seek(0)
+    return send_file(output, download_name="tickets.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     output.seek(0)
     return send_file(output, download_name="tickets.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 

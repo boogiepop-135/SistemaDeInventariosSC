@@ -1,61 +1,56 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 
 const tipos = [
     "laptop", "pc", "monitor", "proyector", "control", "cable hdmi", "display port", "periferico mouse o teclado"
 ];
 
+const campos = [
+    { name: "name", label: "Nombre *", type: "text", required: true },
+    { name: "description", label: "Descripción", type: "text" },
+    {
+        name: "category", label: "Categoría *", type: "select", required: true, options: [
+            "PC", "Laptop", "Periférico", "Impresora", "Escáner", "Switch", "Router", "Access Point", "Cableado", "CCTV", "DVR/NVR", "POS", "Tablet", "Teléfono móvil", "Software", "Correo"
+        ]
+    },
+    { name: "type", label: "Tipo *", type: "select", required: true, options: tipos },
+    { name: "brand", label: "Marca", type: "text" },
+    { name: "model", label: "Modelo", type: "text" },
+    { name: "color", label: "Color", type: "text" },
+    { name: "features", label: "Características", type: "text" },
+    { name: "warranty_date", label: "Fecha de garantía", type: "date" },
+    { name: "manual", label: "Manual en existencia", type: "checkbox" },
+    { name: "status", label: "Estado", type: "select", options: ["stock", "asignado"] },
+    { name: "assigned_to", label: "Asignado a", type: "text" },
+    { name: "physical_status", label: "Estado físico", type: "text" },
+    { name: "area", label: "Área", type: "text" },
+    { name: "recurring_issues", label: "Problemas recurrentes", type: "text" },
+    { name: "knowledge_level", label: "Nivel de conocimiento", type: "text" },
+    { name: "support_person", label: "Soporte actual (persona)", type: "text" },
+    { name: "support_time", label: "Tiempo de soporte", type: "text" }
+];
+
 export const AgregarInventario = () => {
-    const [form, setForm] = useState({
-        category: "",
-        brand: "",
-        model: "",
-        color: "",
-        features: "",
-        warranty_date: "",
-        manual: false,
-        status: "stock",
-        assigned_to: "",
-        physical_status: "",
-        area: "",
-        recurring_issues: "",
-        knowledge_level: "",
-        support_person: "",
-        support_time: ""
-    });
+    const [form, setForm] = useState(
+        campos.reduce((acc, c) => ({ ...acc, [c.name]: c.type === "checkbox" ? false : "" }), {})
+    );
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
-    const [image, setImage] = useState(null);
-    const [preview, setPreview] = useState(null);
-    const fileInputRef = useRef();
 
     const handleChange = e => {
-        const { name, value, type: inputType, checked, files } = e.target;
-        if (name === "image" && files && files[0]) {
-            setImage(files[0]);
-            setPreview(URL.createObjectURL(files[0]));
-            return;
-        }
+        const { name, value, type: inputType, checked } = e.target;
         setForm({
             ...form,
             [name]: inputType === "checkbox" ? checked : value
         });
     };
 
-    const handleCapture = e => {
-        if (e.target.files && e.target.files[0]) {
-            setImage(e.target.files[0]);
-            setPreview(URL.createObjectURL(e.target.files[0]));
-        }
-    };
-
     const handleSubmit = async e => {
         e.preventDefault();
         setError("");
         setSuccess("");
-        const required = [/*"name", "type",*/ "category"];
-        for (let field of required) {
-            if (!form[field]) {
-                setError(`Falta el campo requerido: ${field}`);
+        for (let c of campos) {
+            if (c.required && !form[c.name]) {
+                setError(`Falta el campo requerido: ${c.label.replace("*", "")}`);
                 return;
             }
         }
@@ -65,29 +60,13 @@ export const AgregarInventario = () => {
             const url = `${backendUrl}/api/items`;
             const token = localStorage.getItem("token");
 
-            // Obtener fecha y hora de México Central
-            const now = new Date();
-            const mxTime = now.toLocaleString("sv-SE", { timeZone: "America/Mexico_City" }).replace(" ", "T");
-
-            const dataToSend = {
-                ...form,
-                created_at: mxTime
-            };
-
-            const formData = new FormData();
-            Object.entries(dataToSend).forEach(([key, value]) => {
-                formData.append(key, value);
-            });
-            if (image) {
-                formData.append("image", image);
-            }
-
             const resp = await fetch(url, {
                 method: "POST",
                 headers: {
+                    "Content-Type": "application/json",
                     "Authorization": "Bearer " + token
                 },
-                body: formData
+                body: JSON.stringify(form)
             });
             if (!resp.ok) {
                 const data = await resp.json();
@@ -95,26 +74,7 @@ export const AgregarInventario = () => {
                 return;
             }
             setSuccess("Artículo agregado correctamente");
-            setForm({
-                category: "",
-                brand: "",
-                model: "",
-                color: "",
-                features: "",
-                warranty_date: "",
-                manual: false,
-                status: "stock",
-                assigned_to: "",
-                physical_status: "",
-                area: "",
-                recurring_issues: "",
-                knowledge_level: "",
-                support_person: "",
-                support_time: ""
-            });
-            setImage(null);
-            setPreview(null);
-            if (fileInputRef.current) fileInputRef.current.value = "";
+            setForm(campos.reduce((acc, c) => ({ ...acc, [c.name]: c.type === "checkbox" ? false : "" }), {}));
         } catch (err) {
             setError("Error de conexión con el backend");
         }
@@ -123,49 +83,62 @@ export const AgregarInventario = () => {
     return (
         <div className="container mt-5">
             <h2>Agregar al Inventario</h2>
-            <form onSubmit={handleSubmit} className="mt-4" encType="multipart/form-data">
-                {/* <div className="mb-3">
-                    <label className="form-label">Nombre *</label>
-                    <input type="text" className="form-control" name="name" value={form.name} onChange={handleChange} />
-                </div>
-                <div className="mb-3">
-                    <label className="form-label">Descripción</label>
-                    <input type="text" className="form-control" name="description" value={form.description} onChange={handleChange} />
-                </div> */}
-                <div className="mb-3">
-                    <label className="form-label">Categoría *</label>
-                    <select className="form-select" name="category" value={form.category} onChange={handleChange}>
-                        <option value="">Selecciona categoría</option>
-                        <option value="PC">PC</option>
-                        <option value="Laptop">Laptop</option>
-                        <option value="Periférico">Periférico</option>
-                        <option value="Impresora">Impresora</option>
-                        <option value="Escáner">Escáner</option>
-                        <option value="Switch">Switch</option>
-                        <option value="Router">Router</option>
-                        <option value="Access Point">Access Point</option>
-                        <option value="Cableado">Cableado</option>
-                        <option value="CCTV">CCTV</option>
-                        <option value="DVR/NVR">DVR/NVR</option>
-                        <option value="POS">POS</option>
-                        <option value="Tablet">Tablet</option>
-                        <option value="Teléfono móvil">Teléfono móvil</option>
-                        <option value="Software">Software</option>
-                        <option value="Correo">Correo</option>
-                    </select>
-                </div>
-                {/* <div className="mb-3">
-                    <label className="form-label">Tipo *</label>
-                    <select className="form-select" name="type" value={form.type} onChange={handleChange}>
-                        <option value="">Selecciona tipo</option>
-                        {tipos.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                </div> */}
-                {/* ...resto del formulario... */}
-                <div className="mb-3">
+            <form onSubmit={handleSubmit} className="mt-4">
+                {campos.map(c => (
+                    <div className="mb-3" key={c.name}>
+                        {c.type === "select" ? (
+                            <>
+                                <label className="form-label">{c.label}</label>
+                                <select
+                                    className="form-select"
+                                    name={c.name}
+                                    value={form[c.name]}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">Selecciona {c.label.replace("*", "").toLowerCase()}</option>
+                                    {c.options.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                            </>
+                        ) : c.type === "checkbox" ? (
+                            <div className="form-check">
+                                <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    name={c.name}
+                                    checked={form[c.name]}
+                                    onChange={handleChange}
+                                    id={c.name}
+                                />
+                                <label className="form-check-label" htmlFor={c.name}>
+                                    {c.label}
+                                </label>
+                            </div>
+                        ) : (
+                            <>
+                                <label className="form-label">{c.label}</label>
+                                <input
+                                    type={c.type}
+                                    className="form-control"
+                                    name={c.name}
+                                    value={form[c.name]}
+                                    onChange={handleChange}
+                                />
+                            </>
+                        )}
+                    </div>
+                ))}
+                {error && <div className="alert alert-danger">{error}</div>}
+                {success && <div className="alert alert-success">{success}</div>}
+                <button type="submit" className="btn btn-primary">Agregar</button>
+            </form>
+        </div>
+    );
+};
                     <label className="form-label">Marca</label>
                     <input type="text" className="form-control" name="brand" value={form.brand} onChange={handleChange} />
-                </div>
+                </div >
                 <div className="mb-3">
                     <label className="form-label">Modelo</label>
                     <input type="text" className="form-control" name="model" value={form.model} onChange={handleChange} />
@@ -207,7 +180,36 @@ export const AgregarInventario = () => {
                     <label className="form-label">Área</label>
                     <input type="text" className="form-control" name="area" value={form.area} onChange={handleChange} />
                 </div>
-                {/* <div className="mb-3">
+                <div className="mb-3">
+                    <label className="form-label">Problemas recurrentes</label>
+                    <input type="text" className="form-control" name="recurring_issues" value={form.recurring_issues} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Nivel de conocimiento</label>
+                    <input type="text" className="form-control" name="knowledge_level" value={form.knowledge_level} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Soporte actual (persona)</label>
+                    <input type="text" className="form-control" name="support_person" value={form.support_person} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Tiempo de soporte</label>
+                    <input type="text" className="form-control" name="support_time" value={form.support_time} onChange={handleChange} />
+                </div>
+{ error && <div className="alert alert-danger">{error}</div> }
+{ success && <div className="alert alert-success">{success}</div> }
+<button type="submit" className="btn btn-primary">Agregar</button>
+            </form >
+        </div >
+    );
+};
+<input type="text" className="form-control" name="physical_status" value={form.physical_status} onChange={handleChange} />
+                </div >
+    <div className="mb-3">
+        <label className="form-label">Área</label>
+        <input type="text" className="form-control" name="area" value={form.area} onChange={handleChange} />
+    </div>
+{/* <div className="mb-3">
                     <label className="form-label">Problemas recurrentes</label>
                     <input type="text" className="form-control" name="recurring_issues" value={form.recurring_issues} onChange={handleChange} />
                 </div>
@@ -223,27 +225,27 @@ export const AgregarInventario = () => {
                     <label className="form-label">Tiempo de soporte</label>
                     <input type="text" className="form-control" name="support_time" value={form.support_time} onChange={handleChange} />
                 </div> */}
-                <div className="mb-3">
-                    <label className="form-label">Foto del artículo</label>
-                    <input
-                        type="file"
-                        className="form-control"
-                        name="image"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handleChange}
-                        ref={fileInputRef}
-                    />
-                    {preview && (
-                        <div className="mt-2">
-                            <img src={preview} alt="preview" style={{ maxWidth: 200, maxHeight: 200 }} />
-                        </div>
-                    )}
-                </div>
-                {error && <div className="alert alert-danger">{error}</div>}
-                {success && <div className="alert alert-success">{success}</div>}
-                <button type="submit" className="btn btn-primary">Agregar</button>
-            </form>
+<div className="mb-3">
+    <label className="form-label">Foto del artículo</label>
+    <input
+        type="file"
+        className="form-control"
+        name="image"
+        accept="image/*"
+        capture="environment"
+        onChange={handleChange}
+        ref={fileInputRef}
+    />
+    {preview && (
+        <div className="mt-2">
+            <img src={preview} alt="preview" style={{ maxWidth: 200, maxHeight: 200 }} />
         </div>
+    )}
+</div>
+{ error && <div className="alert alert-danger">{error}</div> }
+{ success && <div className="alert alert-success">{success}</div> }
+<button type="submit" className="btn btn-primary">Agregar</button>
+            </form >
+        </div >
     );
 };
