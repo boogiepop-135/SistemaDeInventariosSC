@@ -29,14 +29,14 @@ jwt = JWTManager(app)
 # Configuración de CORS más permisiva para desarrollo
 CORS(app,
      resources={r"/api/*": {
-         "origins": "*",
+         "origins": ["*"],  # Permitir todas las origins en desarrollo
          "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          "allow_headers": ["Content-Type", "Authorization"],
          "expose_headers": ["Authorization"],
          "supports_credentials": True
      }})
 
-# database condiguration
+# database configuration
 db_url = os.getenv("DATABASE_URL")
 if db_url is not None and db_url != "":
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace(
