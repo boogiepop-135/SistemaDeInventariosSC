@@ -29,7 +29,8 @@ class User(db.Model):
 
 class Item(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(
+        String(120), nullable=False)  # Quita unique=True
     description: Mapped[str] = mapped_column(String(255), nullable=True)
     # Ej: 'PC', 'Impresora', 'Switch', 'CCTV', 'POS', 'Software', 'Correo'
     category: Mapped[str] = mapped_column(String(80), nullable=False)
@@ -58,6 +59,16 @@ class Item(db.Model):
     support_person: Mapped[str] = mapped_column(String(120), nullable=True)
     # Ej: 2h, 1d, etc.
     support_time: Mapped[str] = mapped_column(String(80), nullable=True)
+    image_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        db.DateTime, nullable=True, default=datetime.utcnow)
+    serial: Mapped[str] = mapped_column(String(50), unique=True, nullable=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not getattr(self, 'serial', None):
+            import uuid
+            self.serial = f"INV-{str(uuid.uuid4())[:8].upper()}"
 
     def serialize(self):
         return {
@@ -70,16 +81,15 @@ class Item(db.Model):
             "model": self.model,
             "color": self.color,
             "features": self.features,
-            "warranty_date": self.warranty_date,
+            "warranty_date": self.warranty_date if self.warranty_date else None,
             "manual": self.manual,
             "status": self.status,
             "assigned_to": self.assigned_to,
             "physical_status": self.physical_status,
             "area": self.area,
-            "recurring_issues": self.recurring_issues,
-            "knowledge_level": self.knowledge_level,
-            "support_person": self.support_person,
-            "support_time": self.support_time
+            "image_url": self.image_url,
+            "serial": self.serial,
+            "created_at": self.created_at.isoformat() if isinstance(self.created_at, datetime) and self.created_at else None
         }
 
 
@@ -101,7 +111,7 @@ class Inventory(db.Model):
 class Ticket(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(120), nullable=False)
-    description: Mapped[str] = mapped_column(String(255), nullable=True)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
     item_id: Mapped[int] = mapped_column(nullable=True)
     status: Mapped[str] = mapped_column(
         String(50), default="pendiente")  # pendiente, solucionado
@@ -137,3 +147,6 @@ class Ticket(db.Model):
 
 # En tu app principal (ejemplo src/app.py):
 # app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
+
+        # En tu app principal (ejemplo src/app.py):
+        # app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")

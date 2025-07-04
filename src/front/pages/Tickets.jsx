@@ -1,75 +1,91 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 export const Tickets = () => {
     const [tickets, setTickets] = useState([]);
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchTickets = async () => {
             try {
-                const backendUrl = import.meta.env.VITE_BACKEND_URL;
-                let url = `${backendUrl}/api/tickets`;
-                if (backendUrl.endsWith("/")) url = url.replace(/\/+api/, "/api");
+                let backendUrl = import.meta.env.VITE_BACKEND_URL;
+                if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
+
                 const token = localStorage.getItem("token");
-                const resp = await fetch(url, {
+                const response = await fetch(`${backendUrl}/api/tickets`, {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": `Bearer ${token}`
                     }
                 });
-                if (!resp.ok) throw new Error("No se pudo obtener los tickets");
-                const data = await resp.json();
+
+                if (!response.ok) {
+                    throw new Error("Error al cargar tickets");
+                }
+
+                const data = await response.json();
                 setTickets(data);
             } catch (err) {
-                setError("Error al cargar los tickets");
+                setError("Error al cargar los tickets: " + err.message);
+            } finally {
+                setLoading(false);
             }
         };
+
         fetchTickets();
     }, []);
 
+    if (loading) return <div className="container mt-5">Cargando tickets...</div>;
+
     return (
         <div className="container mt-5">
-            <h2>Estado de Tickets</h2>
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <h2>Tickets de Soporte</h2>
+                <Link to="/crear-ticket" className="btn btn-primary">
+                    Crear Nuevo Ticket
+                </Link>
+            </div>
+
             {error && <div className="alert alert-danger">{error}</div>}
-            {tickets.length === 0 && !error && (
+
+            {tickets.length === 0 ? (
                 <p>No hay tickets registrados.</p>
-            )}
-            {tickets.length > 0 && (
+            ) : (
                 <div className="table-responsive">
-                    <table className="table table-bordered table-striped mt-3">
+                    <table className="table table-striped">
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>Título</th>
-                                <th>Tipo Incidencia</th>
                                 <th>Estado</th>
                                 <th>Prioridad</th>
-                                <th>Sucursal</th>
-                                <th>Departamento</th>
-                                <th>Persona</th>
-                                <th>Comentarios</th>
-                                <th>ID Artículo</th>
-                                <th>Fecha/Hora</th>
+                                <th>Creado</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {tickets.map(ticket => (
                                 <tr key={ticket.id}>
+                                    <td>{ticket.id}</td>
                                     <td>{ticket.title}</td>
-                                    <td>{ticket.incident_type}</td>
                                     <td>
-                                        {ticket.status === "solucionado"
-                                            ? <span className="badge bg-success">Resuelto</span>
-                                            : ticket.status === "pendiente"
-                                                ? <span className="badge bg-warning text-dark">Pendiente</span>
-                                                : <span className="badge bg-info text-dark">{ticket.status}</span>
-                                        }
+                                        <span className={`badge bg-${ticket.status === "abierto" ? "success" :
+                                                ticket.status === "en_proceso" ? "warning" :
+                                                    "secondary"
+                                            }`}>
+                                            {ticket.status}
+                                        </span>
                                     </td>
                                     <td>{ticket.priority}</td>
-                                    <td>{ticket.branch}</td>
-                                    <td>{ticket.department}</td>
-                                    <td>{ticket.created_by}</td>
-                                    <td>{ticket.comments}</td>
-                                    <td>{ticket.item_id}</td>
-                                    <td>{ticket.created_at}</td>
+                                    <td>{new Date(ticket.created_at).toLocaleDateString()}</td>
+                                    <td>
+                                        <Link
+                                            to={`/ticket/${ticket.id}`}
+                                            className="btn btn-sm btn-info me-2"
+                                        >
+                                            Ver
+                                        </Link>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

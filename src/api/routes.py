@@ -12,6 +12,9 @@ import pytz
 import pandas as pd
 from io import BytesIO
 import os
+from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
+import base64
+import requests
 
 api = Blueprint('api', __name__)
 
@@ -108,11 +111,72 @@ def handle_hello():
 
 
 # --- Endpoints protegidos ---
-@api.route('/items', methods=['GET'])
+@api.route("/items", methods=["GET"])
 @jwt_required
 def get_items():
-    items = Item.query.all()
-    return jsonify([item.serialize() for item in items]), 200
+    try:
+        items = Item.query.all()
+        for item in items:
+            # Esto mostrará en consola si hay error en algún item
+            print(item.serialize())
+        return jsonify([item.serialize() for item in items]), 200
+    except Exception as e:
+        import traceback
+        print("Error en /api/items:", traceback.format_exc())
+        return jsonify({"message": str(e)}), 500
+
+    return jsonify(item.serialize()), 200
+
+
+@api.route("/items", methods=["POST"])
+@jwt_required
+def create_item():
+    try:
+        data = request.get_json()
+        image_data = data.pop('image', None)
+
+        # Crear el item primero
+        item = Item(**data)
+
+        # Si hay imagen, subirla a GitHub
+        if image_data and image_data.startswith('data:image'):
+            try:
+                # Extraer base64 de la imagen
+                base64_content = image_data.split(',')[1]
+                image_bytes = base64.b64decode(base64_content)
+
+                # Configurar GitHub
+                github_token = os.getenv('GITHUB_TOKEN')
+                repo = os.getenv('GITHUB_REPO')
+                image_name = f"item_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                path = f"images/{image_name}"
+
+                # Subir a GitHub
+                url = f"https://api.github.com/repos/{repo}/contents/{path}"
+                headers = {
+                    "Authorization": f"token {github_token}",
+                    "Accept": "application/vnd.github.v3+json"
+                }
+
+                payload = {
+                    "message": f"Add image for item {item.name}",
+                    "content": base64.b64encode(image_bytes).decode('utf-8')
+                }
+
+                response = requests.put(url, json=payload, headers=headers)
+                if response.status_code in [201, 200]:
+                    item.image_url = f"https://raw.githubusercontent.com/{repo}/main/{path}"
+
+            except Exception as e:
+                print(f"Error subiendo imagen: {str(e)}")
+
+        db.session.add(item)
+        db.session.commit()
+        return jsonify(item.serialize()), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 400
 
 
 @api.route('/items/<int:item_id>', methods=['GET'])
@@ -122,82 +186,6 @@ def get_item(item_id):
     if not item:
         return jsonify({"msg": "Item not found"}), 404
     return jsonify(item.serialize()), 200
-
-
-@api.route('/items', methods=['POST'])
-@jwt_required
-def create_item():
-    if request.content_type.startswith('multipart/form-data'):
-        name = request.form.get('name')
-        description = request.form.get('description')
-        category = request.form.get('category')
-        type_ = request.form.get('type')
-        brand = request.form.get('brand')
-        model = request.form.get('model')
-        color = request.form.get('color')
-        features = request.form.get('features')
-        warranty_date = request.form.get('warranty_date')
-        manual = request.form.get('manual', False)
-        # Convertir manual a booleano
-        if isinstance(manual, str):
-            manual = manual.lower() == 'true'
-        else:
-            manual = bool(manual)
-        status = request.form.get('status', 'stock')
-        assigned_to = request.form.get('assigned_to')
-        # Validar campos obligatorios
-        if not name or not category or not type_:
-            return jsonify({"msg": "Faltan campos obligatorios: name, category, type"}), 400
-        item = Item(
-            name=name,
-            description=description,
-            category=category,
-            type=type_,
-            brand=brand,
-            model=model,
-            color=color,
-            features=features,
-            warranty_date=warranty_date,
-            manual=manual,
-            status=status,
-            assigned_to=assigned_to
-        )
-        db.session.add(item)
-        db.session.commit()
-        return jsonify(item.serialize()), 201
-    elif request.is_json:
-        data = request.json
-        name = data.get("name")
-        category = data.get("category")
-        type_ = data.get("type")
-        # Validar campos obligatorios
-        if not name or not category or not type_:
-            return jsonify({"msg": "Faltan campos obligatorios: name, category, type"}), 400
-        manual = data.get("manual", False)
-        # Convertir manual a booleano
-        if isinstance(manual, str):
-            manual = manual.lower() == 'true'
-        else:
-            manual = bool(manual)
-        item = Item(
-            name=name,
-            category=category,
-            type=type_,
-            manual=manual,
-            description=data.get("description"),
-            brand=data.get("brand"),
-            model=data.get("model"),
-            color=data.get("color"),
-            features=data.get("features"),
-            warranty_date=data.get("warranty_date"),
-            status=data.get("status", "stock"),
-            assigned_to=data.get("assigned_to")
-        )
-        db.session.add(item)
-        db.session.commit()
-        return jsonify(item.serialize()), 201
-    else:
-        return jsonify({"msg": "Tipo de contenido no soportado"}), 415
 
 
 @api.route('/items/<int:item_id>', methods=['PUT'])
@@ -237,42 +225,54 @@ def delete_item(item_id):
 @api.route('/tickets', methods=['GET'])
 @jwt_required
 def get_tickets():
-    tickets = Ticket.query.all()
-    return jsonify([ticket.serialize() for ticket in tickets]), 200
+    try:
+        tickets = Ticket.query.order_by(Ticket.created_at.desc()).all()
+        return jsonify([ticket.serialize() for ticket in tickets]), 200
+    except Exception as e:
+        import traceback
+        print("Error en /api/tickets:", traceback.format_exc())
+        return jsonify({"message": str(e)}), 500
 
 
 @api.route('/tickets/<int:ticket_id>', methods=['GET'])
 @jwt_required
 def get_ticket(ticket_id):
-    ticket = Ticket.query.get(ticket_id)
-    if not ticket:
-        return jsonify({"msg": "Ticket not found"}), 404
-    return jsonify(ticket.serialize()), 200
+    try:
+        ticket = Ticket.query.get(ticket_id)
+        if not ticket:
+            return jsonify({"msg": "Ticket no encontrado"}), 404
+        return jsonify(ticket.serialize()), 200
+    except Exception as e:
+        return jsonify({"msg": str(e)}), 500
 
 
 @api.route('/tickets', methods=['POST'])
 @jwt_required
 def create_ticket():
-    if not request.is_json:
-        return jsonify({"msg": "El Content-Type debe ser application/json"}), 415
-    data = request.json
-    ticket = Ticket(
-        title=data.get("title"),
-        description=data.get("description"),
-        item_id=data.get("item_id"),
-        status=data.get("status", "pendiente"),
-        created_by=data.get("created_by"),
-        branch=data.get("branch"),
-        department=data.get("department"),
-        priority=data.get("priority", "normal"),
-        comments=data.get("comments"),
-        incident_type=data.get("incident_type"),
-        created_at=datetime.now(pytz.timezone(
-            "America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
-    )
-    db.session.add(ticket)
-    db.session.commit()
-    return jsonify(ticket.serialize()), 201
+    try:
+        if not request.is_json:
+            return jsonify({"msg": "El Content-Type debe ser application/json"}), 415
+        data = request.json
+        ticket = Ticket(
+            title=data.get("title"),
+            description=data.get("description"),
+            item_id=data.get("item_id"),
+            status=data.get("status", "pendiente"),
+            created_by=data.get("created_by"),
+            branch=data.get("branch"),
+            department=data.get("department"),
+            priority=data.get("priority", "normal"),
+            comments=data.get("comments"),
+            incident_type=data.get("incident_type"),
+            created_at=datetime.now(pytz.timezone(
+                "America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+        )
+        db.session.add(ticket)
+        db.session.commit()
+        return jsonify(ticket.serialize()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"msg": str(e)}), 400
 
 
 @api.route('/tickets/<int:ticket_id>', methods=['PUT'])
@@ -362,7 +362,7 @@ def edit_user(username):
     return jsonify({"msg": f"Usuario {username} actualizado"}), 200
 
 
-# Ejemplo de uso:
+# Ejemplo de uso: != "admin":
 @api.route('/admin-only', methods=['GET'])
 @jwt_required_role(["admin"])
 def admin_only():
@@ -383,28 +383,6 @@ def export_items_excel():
 
 @api.route('/tickets/export', methods=['GET'])
 @jwt_required
-def export_tickets_excel():
-    tickets = Ticket.query.all()
-    data = [ticket.serialize() for ticket in tickets]
-    df = pd.DataFrame(data)
-    output = BytesIO()
-    df.to_excel(output, index=False, engine='openpyxl')
-    output.seek(0)
-    return send_file(output, download_name="tickets.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-
-def export_tickets_excel():
-    tickets = Ticket.query.all()
-    data = [ticket.serialize() for ticket in tickets]
-    df = pd.DataFrame(data)
-    output = BytesIO()
-    df.to_excel(output, index=False, engine='openpyxl')
-    output.seek(0)
-    return send_file(output, download_name="tickets.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    output.seek(0)
-    return send_file(output, download_name="tickets.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-
 def export_tickets_excel():
     tickets = Ticket.query.all()
     data = [ticket.serialize() for ticket in tickets]
