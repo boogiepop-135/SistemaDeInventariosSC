@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint, send_file
-from api.models import db, User, Item, Ticket
+from api.models import db, User, Item, Ticket, Requisition
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -253,9 +253,29 @@ def create_ticket():
         if not request.is_json:
             return jsonify({"msg": "El Content-Type debe ser application/json"}), 415
         data = request.json
+
+        # Debug: imprimir los datos recibidos
+        print("Datos recibidos para crear ticket:", data)
+
+        # Validar campos requeridos con menos restricciones
+        description = data.get("description")
+        if description is None:
+            return jsonify({"msg": "La descripción es requerida"}), 400
+
+        # Convertir a string y limpiar espacios
+        description = str(description).strip(
+        ) if description is not None else ""
+        if description == "":
+            return jsonify({"msg": "La descripción no puede estar vacía"}), 400
+
+        # Si no se recibe 'title', genera uno automático
+        title = data.get("title")
+        if not title or str(title).strip() == "":
+            title = f"Ticket {datetime.now(pytz.timezone('America/Mexico_City')).strftime('%Y-%m-%d %H:%M:%S')}"
+
         ticket = Ticket(
-            title=data.get("title"),
-            description=data.get("description"),
+            title=str(title).strip(),
+            description=description,
             item_id=data.get("item_id"),
             status=data.get("status", "pendiente"),
             created_by=data.get("created_by"),
@@ -272,6 +292,9 @@ def create_ticket():
         return jsonify(ticket.serialize()), 201
     except Exception as e:
         db.session.rollback()
+        print("Error completo al crear ticket:", str(e))
+        import traceback
+        print("Traceback:", traceback.format_exc())
         return jsonify({"msg": str(e)}), 400
 
 
@@ -391,3 +414,108 @@ def export_tickets_excel():
     df.to_excel(output, index=False, engine='openpyxl')
     output.seek(0)
     return send_file(output, download_name="tickets.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+# Rutas para requisiciones
+@api.route('/requisitions', methods=['GET'])
+@jwt_required
+def get_requisitions():
+    try:
+        requisitions = Requisition.query.order_by(
+            Requisition.created_at.desc()).all()
+        return jsonify([req.serialize() for req in requisitions]), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+
+@api.route('/requisitions/<int:requisition_id>', methods=['GET'])
+@jwt_required
+def get_requisition(requisition_id):
+    try:
+        requisition = Requisition.query.get(requisition_id)
+        if not requisition:
+            return jsonify({"msg": "Requisición no encontrada"}), 404
+        return jsonify(requisition.serialize()), 200
+    except Exception as e:
+        return jsonify({"msg": str(e)}), 500
+
+
+@api.route('/requisitions', methods=['POST'])
+@jwt_required
+def create_requisition():
+    try:
+        if not request.is_json:
+            return jsonify({"msg": "El Content-Type debe ser application/json"}), 415
+        data = request.json
+
+        # Validar campos requeridos
+        description = data.get("description")
+        if description is None or str(description).strip() == "":
+            return jsonify({"msg": "La descripción es requerida"}), 400
+
+        # Generar título automático si no se proporciona
+        title = data.get("title")
+        if not title or str(title).strip() == "":
+            title = f"Requisición {datetime.now(pytz.timezone('America/Mexico_City')).strftime('%Y-%m-%d %H:%M:%S')}"
+
+        requisition = Requisition(
+            title=str(title).strip(),
+            description=str(description).strip(),
+            requested_by=data.get("requested_by"),
+            department=data.get("department"),
+            status=data.get("status", "pendiente"),
+            priority=data.get("priority", "normal"),
+            comments=data.get("comments"),
+            items=data.get("items"),
+            approval_by=data.get("approval_by"),
+            expected_date=data.get("expected_date"),
+            created_at=datetime.now(pytz.timezone(
+                "America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+        )
+        db.session.add(requisition)
+        db.session.commit()
+        return jsonify(requisition.serialize()), 201
+    except Exception as e:
+        db.session.rollback()
+        print("Error completo al crear requisición:", str(e))
+        import traceback
+        print("Traceback:", traceback.format_exc())
+        return jsonify({"msg": str(e)}), 400
+
+
+@api.route('/requisitions/<int:requisition_id>', methods=['PUT'])
+@jwt_required_role(["admin"])
+def update_requisition(requisition_id):
+    requisition = Requisition.query.get(requisition_id)
+    if not requisition:
+        return jsonify({"msg": "Requisición no encontrada"}), 404
+    data = request.json
+    requisition.title = data.get("title", requisition.title)
+    requisition.description = data.get("description", requisition.description)
+    requisition.requested_by = data.get(
+        "requested_by", requisition.requested_by)
+    requisition.department = data.get("department", requisition.department)
+    requisition.status = data.get("status", requisition.status)
+    requisition.priority = data.get("priority", requisition.priority)
+    requisition.comments = data.get("comments", requisition.comments)
+    requisition.items = data.get("items", requisition.items)
+    requisition.approval_by = data.get("approval_by", requisition.approval_by)
+    requisition.expected_date = data.get(
+        "expected_date", requisition.expected_date)
+    db.session.commit()
+    return jsonify(requisition.serialize()), 200
+
+
+@api.route('/requisitions/<int:requisition_id>', methods=['DELETE'])
+@jwt_required_role(["admin"])
+def delete_requisition(requisition_id):
+    requisition = Requisition.query.get(requisition_id)
+    if not requisition:
+        return jsonify({"msg": "Requisición no encontrada"}), 404
+    db.session.delete(requisition)
+    db.session.commit()
+    return jsonify({"msg": "Requisición eliminada"}), 200
+    return jsonify({"msg": "Requisición no encontrada"}), 404
+    db.session.delete(requisition)
+    db.session.commit()
+    return jsonify({"msg": "Requisición eliminada"}), 200

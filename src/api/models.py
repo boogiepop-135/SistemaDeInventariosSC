@@ -141,8 +141,42 @@ class Ticket(db.Model):
             "department": self.department,
             "priority": self.priority,
             "comments": self.comments,
-            "created_at": self.created_at or datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S"),
             "incident_type": self.incident_type,
+            "created_at": self.created_at
+        }
+
+
+class Requisition(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    requested_by = db.Column(db.String(120))
+    department = db.Column(db.String(120))
+    status = db.Column(db.String(50), default="pendiente")
+    priority = db.Column(db.String(50), default="normal")
+    comments = db.Column(db.Text)
+    created_at = db.Column(db.String(120))
+    items = db.Column(db.Text)  # JSON string con los items solicitados
+    approval_by = db.Column(db.String(120))
+    expected_date = db.Column(db.String(120))
+
+    def __repr__(self):
+        return f'<Requisition {self.id}>'
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "requested_by": self.requested_by,
+            "department": self.department,
+            "status": self.status,
+            "priority": self.priority,
+            "comments": self.comments,
+            "created_at": self.created_at,
+            "items": self.items,
+            "approval_by": self.approval_by,
+            "expected_date": self.expected_date
         }
 
 # En tu app principal (ejemplo src/app.py):

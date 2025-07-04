@@ -1,23 +1,19 @@
+import React, { useContext, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import React, { useState } from "react";
+import { Context } from "../store/appContext";
 
 export const Navbar = () => {
+	const { store, actions } = useContext(Context);
 	const location = useLocation();
 	const navigate = useNavigate();
-	const role = localStorage.getItem("role");
-	const username = localStorage.getItem("username");
 	const [darkMode, setDarkMode] = useState(
 		localStorage.getItem("darkMode") === "true"
 	);
 
 	const handleLogout = () => {
-		localStorage.removeItem("token");
-		localStorage.removeItem("role");
-		localStorage.removeItem("username");
+		actions.logout();
 		navigate("/login");
 	};
-
-	const isActive = !!role;
 
 	const toggleDarkMode = () => {
 		const newMode = !darkMode;
@@ -39,79 +35,59 @@ export const Navbar = () => {
 	}, [darkMode]);
 
 	return (
-		<nav className={`navbar navbar-expand ${darkMode ? "navbar-dark bg-dark" : "bg-light"} border-bottom mb-4`}>
-			<div className="container justify-content-center">
-				<ul className="nav">
-					<li className="nav-item">
-						<Link to="/inventario" className={`nav-link${location.pathname === "/inventario" ? " active" : ""}`}>Ver Inventario</Link>
-					</li>
-					{role === "admin" && (
+		<nav className={`navbar navbar-expand-lg navbar-dark ${darkMode ? "bg-dark" : "bg-light"} border-bottom mb-4`}>
+			<div className="container">
+				<Link className="navbar-brand" to="/">
+					<i className="fas fa-cogs me-2"></i>
+					Sistema Cosmecito
+				</Link>
+				<button
+					className="navbar-toggler"
+					type="button"
+					data-bs-toggle="collapse"
+					data-bs-target="#navbarNav"
+					aria-controls="navbarNav"
+					aria-expanded="false"
+					aria-label="Toggle navigation"
+				>
+					<span className="navbar-toggler-icon"></span>
+				</button>
+				<div className="collapse navbar-collapse" id="navbarNav">
+					<ul className="navbar-nav me-auto mb-2 mb-lg-0">
 						<li className="nav-item">
-							<Link to="/inventario/agregar" className={`nav-link${location.pathname === "/inventario/agregar" ? " active" : ""}`}>Agregar al Inventario</Link>
+							<Link className="nav-link" to="/">Home</Link>
 						</li>
-					)}
-					<li className="nav-item">
-						<Link to="/tickets/crear" className={`nav-link${location.pathname === "/tickets/crear" ? " active" : ""}`}>Crear Ticket</Link>
-					</li>
-					<li className="nav-item">
-						<Link to="/tickets" className={`nav-link${location.pathname === "/tickets" ? " active" : ""}`}>Ver Estado de Tickets</Link>
-					</li>
-					{role === "admin" && (
-						<li className="nav-item">
-							<Link to="/admin" className="nav-link">Panel Admin</Link>
-						</li>
-					)}
-					<li className="nav-item d-flex align-items-center ms-3">
-						<button
-							className={`btn btn-sm ${darkMode ? "btn-light" : "btn-dark"} me-2`}
-							onClick={toggleDarkMode}
-							type="button"
-						>
-							{darkMode ? "Modo claro" : "Modo oscuro"}
-						</button>
-					</li>
-					{role && (
-						<li className="nav-item d-flex align-items-center ms-3">
-							<span
-								className="me-2"
-								title={isActive ? "Activo" : "Inactivo"}
-								style={{
-									display: "inline-block",
-									width: 12,
-									height: 12,
-									borderRadius: "50%",
-									background: isActive ? "#28a745" : "#dc3545",
-									border: "1px solid #888",
-									marginRight: 6,
-								}}
-							></span>
-							<span className="me-2 text-secondary">Usuario: {username}</span>
-							<button className="btn btn-outline-danger" onClick={handleLogout}>
-								Cerrar sesión
+						{store.token && (
+							<>
+								<li className="nav-item">
+									<Link className="nav-link" to="/inventario">Inventario</Link>
+								</li>
+								<li className="nav-item">
+									<Link className="nav-link" to="/tickets">Tickets</Link>
+								</li>
+								<li className="nav-item">
+									<Link className="nav-link" to="/requisiciones">Requisiciones</Link>
+								</li>
+								{store.role === "admin" && (
+									<li className="nav-item">
+										<Link className="nav-link" to="/admin">Admin</Link>
+									</li>
+								)}
+							</>
+						)}
+					</ul>
+					<div className="d-flex">
+						{store.token ? (
+							<button onClick={handleLogout} className="btn btn-outline-light">
+								<i className="fas fa-sign-out-alt me-2"></i>Logout
 							</button>
-						</li>
-					)}
-					{!role && (
-						<li className="nav-item d-flex align-items-center ms-3">
-							<span
-								className="me-2"
-								title="Inactivo"
-								style={{
-									display: "inline-block",
-									width: 12,
-									height: 12,
-									borderRadius: "50%",
-									background: "#dc3545",
-									border: "1px solid #888",
-									marginRight: 6,
-								}}
-							></span>
-							<button className="btn btn-outline-primary" onClick={() => navigate("/login")}>
-								Iniciar sesión
-							</button>
-						</li>
-					)}
-				</ul>
+						) : (
+							<Link to="/login" className="btn btn-primary">
+								<i className="fas fa-sign-in-alt me-2"></i>Login
+							</Link>
+						)}
+					</div>
+				</div>
 			</div>
 		</nav>
 	);

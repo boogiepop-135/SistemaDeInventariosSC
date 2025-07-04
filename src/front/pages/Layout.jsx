@@ -3,6 +3,7 @@ import ScrollToTop from "../components/ScrollToTop"
 import { Navbar } from "../components/Navbar"
 import { Footer } from "../components/Footer"
 import { useEffect } from "react"
+import injectContext from "../store/appContext";
 
 function isTokenExpired(token) {
     if (!token) return true;
@@ -17,7 +18,7 @@ function isTokenExpired(token) {
 }
 
 // Base component that maintains the navbar and footer throughout the page and the scroll to top functionality.
-export const Layout = () => {
+const LayoutComponent = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -45,3 +46,5 @@ export const Layout = () => {
         </ScrollToTop>
     )
 }
+
+export const Layout = injectContext(LayoutComponent);

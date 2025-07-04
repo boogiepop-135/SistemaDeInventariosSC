@@ -59,7 +59,12 @@ export const Inventario = () => {
 
     return (
         <div className="container mt-5">
-            <h2>Inventario de Artículos</h2>
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <h2>Inventario de Artículos</h2>
+                <Link to="/inventario/agregar" className="btn btn-primary">
+                    <i className="fas fa-plus me-2"></i> Agregar Artículo
+                </Link>
+            </div>
             {error && <div className="alert alert-danger">{error}</div>}
             {articulos.length === 0 && !error && (
                 <p>No hay artículos en el inventario.</p>

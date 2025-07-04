@@ -1,4 +1,8 @@
 import React, { useState } from "react";
+import { Link, BrowserRouter, Routes, Route } from "react-router-dom";
+import { CrearRequisicion } from "./pages/CrearRequisicion";
+import { VerRequisiciones } from "./pages/VerRequisiciones";
+import { RequisicionDetalle } from "./pages/RequisicionDetalle";
 
 const sucursales = ["matriz", "juriquilla", "centro sur"];
 const departamentos = ["cedis", "cepro", "piso"];
@@ -130,7 +134,43 @@ export const CrearTicket = () => {
                 {success && <div className="alert alert-success">{success}</div>}
                 <button type="submit" className="btn btn-primary">Crear Ticket</button>
             </form>
+            {/* Ejemplo de uso de Link para navegar a los detalles de un ticket */}
+            <div className="mt-4">
+                <h3>Tickets Existentes</h3>
+                {/* Suponiendo que tienes un array de tickets en el estado llamado 'tickets' */}
+                {tickets.map(ticket => (
+                    <div key={ticket.id} className="border p-3 mb-3">
+                        <h4>Ticket ID: {ticket.id}</h4>
+                        <p><strong>Sucursal:</strong> {ticket.branch}</p>
+                        <p><strong>Departamento:</strong> {ticket.department}</p>
+                        <p><strong>Prioridad:</strong> {ticket.priority}</p>
+                        <p><strong>Tipo de Incidencia:</strong> {ticket.incident_type}</p>
+                        <p><strong>Descripción:</strong> {ticket.description}</p>
+                        <p><strong>Estado:</strong> {ticket.status}</p>
+                        <Link to={`/tickets/${ticket.id}`} className="btn btn-primary">
+                            Ver Detalles
+                        </Link>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };
-               
+const Layout = () => {
+    return (
+        <BrowserRouter>
+            {/* ...existing code... */}
+            <Routes>
+                {/* ...otras rutas... */}
+                <Route path="/crear-ticket" element={<CrearTicket />} />
+                <Route path="/crear-requisicion" element={<CrearRequisicion />} />
+                <Route path="/requisiciones" element={<VerRequisiciones />} />
+                <Route path="/requisitions/:requisition_id" element={<RequisicionDetalle />} />
+                {/* ...otras rutas... */}
+            </Routes>
+            {/* ...existing code... */}
+        </BrowserRouter>
+    );
+};
+
+export default Layout;

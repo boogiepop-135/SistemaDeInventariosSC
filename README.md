@@ -11,7 +11,7 @@ Build web applications using React.js for the front end and python/flask for you
 
 ### 1) Installation:
 
-> If you use Github Codespaces (recommended) or Gitpod this template will already come with Python, Node and the Posgres Database installed. If you are working locally make sure to install Python 3.10, Node 
+> If you use Github Codespaces (recommended) or Gitpod this template will already come with Python, Node and the Posgres Database installed. If you are working locally make sure to install Python 3.10, Node
 
 It is recomended to install the backend first, make sure you have Python 3.10, Pipenv and a database engine (Posgress recomended)
 
@@ -61,11 +61,11 @@ And you will see the following message:
 
 ### **Important note for the database and the data inside it**
 
-Every Github codespace environment will have **its own database**, so if you're working with more people eveyone will have a different database and different records inside it. This data **will be lost**, so don't spend too much time manually creating records for testing, instead, you can automate adding records to your database by editing ```commands.py``` file inside ```/src/api``` folder. Edit line 32 function ```insert_test_data``` to insert the data according to your model (use the function ```insert_test_users``` above as an example). Then, all you need to do is run ```pipenv run insert-test-data```.
+Every Github codespace environment will have **its own database**, so if you're working with more people eveyone will have a different database and different records inside it. This data **will be lost**, so don't spend too much time manually creating records for testing, instead, you can automate adding records to your database by editing `commands.py` file inside `/src/api` folder. Edit line 32 function `insert_test_data` to insert the data according to your model (use the function `insert_test_users` above as an example). Then, all you need to do is run `pipenv run insert-test-data`.
 
 ### Front-End Manual Installation:
 
--   Make sure you are using node version 20 and that you have already successfully installed and runned the backend.
+- Make sure you are using node version 20 and that you have already successfully installed and runned the backend.
 
 1. Install the packages: `$ npm install`
 2. Start coding! start the webpack dev server `$ npm run start`
@@ -73,6 +73,60 @@ Every Github codespace environment will have **its own database**, so if you're 
 ## Publish your website!
 
 This boilerplate it's 100% read to deploy with Render.com and Heroku in a matter of minutes. Please read the [official documentation about it](https://4geeks.com/docs/start/deploy-to-render-com).
+
+## Cómo levantar el backend usando los scripts
+
+### 1. Inicializar la base de datos (solo la primera vez o si cambias el modelo)
+
+```bash
+./initialize_db.sh
+```
+
+### 2. Iniciar el backend en segundo plano
+
+```bash
+./start_background.sh
+```
+
+### 3. Ver logs del backend en tiempo real
+
+```bash
+tail -f backend.log
+```
+
+### 4. Detener el backend
+
+```bash
+./stop_backend.sh
+```
+
+### 5. Si solo quieres correr el backend en primer plano (bloquea la terminal)
+
+```bash
+./run_backend.sh
+```
+
+## ¿Debo correr los scripts desde `pipenv shell`?
+
+Sí, **recomendado**:
+
+- Primero ejecuta:
+
+  ```bash
+  pipenv shell
+  ```
+
+  para activar el entorno virtual.
+
+- Luego puedes correr los scripts, por ejemplo:
+  ```bash
+  ./initialize_db.sh
+  ./run_backend.sh
+  ./start_background.sh
+  ./stop_backend.sh
+  ```
+
+Esto asegura que todos los comandos usen las dependencias de tu entorno virtual de Python.
 
 ### Contributors
 

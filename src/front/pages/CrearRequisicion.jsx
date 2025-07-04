@@ -1,30 +1,23 @@
 import React, { useState } from "react";
 
-const sucursales = ["matriz", "juriquilla", "centro sur"];
-const departamentos = ["cedis", "cepro", "piso"];
-const prioridades = ["normal", "urgente", "critico"];
-const incidentTypes = [
-    "punto de venta", "celular", "laptop", "conexion a internet", "correo", "inventory", "uber"
-];
+const departamentos = ["cedis", "cepro", "piso", "ventas", "compras", "it", "rh"];
+const prioridades = ["baja", "normal", "alta", "urgente"];
 
-export const CrearTicket = () => {
+export const CrearRequisicion = () => {
     const [form, setForm] = useState({
-        description: "", // Añadido campo para descripción
-        status: "pendiente", // siempre pendiente al crear
-        created_by: "",
-        branch: "",
+        description: "",
+        requested_by: "",
         department: "",
         priority: "normal",
         comments: "",
-        incident_type: ""
+        items: "",
+        expected_date: ""
     });
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
     const handleChange = e => {
         const { name, value } = e.target;
-        // No permitir cambiar status desde el formulario
-        if (name === "status") return;
         setForm({
             ...form,
             [name]: value
@@ -35,7 +28,7 @@ export const CrearTicket = () => {
         e.preventDefault();
         setError("");
         setSuccess("");
-        const required = ["branch", "department", "priority", "incident_type", "description"];
+        const required = ["description", "department", "priority"];
         for (let field of required) {
             if (!form[field]) {
                 setError(`Falta el campo requerido: ${field}. Por favor completa este campo antes de continuar.`);
@@ -45,7 +38,7 @@ export const CrearTicket = () => {
         try {
             let backendUrl = import.meta.env.VITE_BACKEND_URL || "https://humble-space-lamp-wrgjp7p7gj6qhv6g-5000.app.github.dev";
             if (backendUrl.endsWith("/")) backendUrl = backendUrl.slice(0, -1);
-            const url = `${backendUrl}/api/tickets`;
+            const url = `${backendUrl}/api/requisitions`;
             const token = localStorage.getItem("token");
             const resp = await fetch(url, {
                 method: "POST",
@@ -61,20 +54,19 @@ export const CrearTicket = () => {
                 setError(
                     data.message ||
                     data.msg ||
-                    `Error ${resp.status}: No se pudo crear el ticket. Verifica que todos los campos requeridos estén completos y que tu sesión esté activa.`
+                    `Error ${resp.status}: No se pudo crear la requisición. Verifica que todos los campos requeridos estén completos y que tu sesión esté activa.`
                 );
                 return;
             }
-            setSuccess("Ticket creado correctamente");
+            setSuccess("Requisición creada correctamente");
             setForm({
                 description: "",
-                status: "pendiente",
-                created_by: "",
-                branch: "",
+                requested_by: "",
                 department: "",
                 priority: "normal",
                 comments: "",
-                incident_type: ""
+                items: "",
+                expected_date: ""
             });
         } catch (err) {
             setError("Error de conexión con el backend");
@@ -83,15 +75,8 @@ export const CrearTicket = () => {
 
     return (
         <div className="container mt-5">
-            <h2>Crear Ticket</h2>
+            <h2>Crear Requisición</h2>
             <form onSubmit={handleSubmit} className="mt-4">
-                <div className="mb-3">
-                    <label className="form-label">Sucursal *</label>
-                    <select className="form-select" name="branch" value={form.branch} onChange={handleChange}>
-                        <option value="">Selecciona sucursal</option>
-                        {sucursales.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                </div>
                 <div className="mb-3">
                     <label className="form-label">Departamento *</label>
                     <select className="form-select" name="department" value={form.department} onChange={handleChange}>
@@ -106,31 +91,31 @@ export const CrearTicket = () => {
                     </select>
                 </div>
                 <div className="mb-3">
-                    <label className="form-label">Tipo de incidencia *</label>
-                    <select className="form-select" name="incident_type" value={form.incident_type} onChange={handleChange}>
-                        <option value="">Selecciona tipo</option>
-                        {incidentTypes.map(type => (
-                            <option key={type} value={type}>{type}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="mb-3">
                     <label className="form-label">Descripción *</label>
-                    <textarea className="form-control" name="description" value={form.description} onChange={handleChange} />
+                    <textarea className="form-control" name="description" value={form.description} onChange={handleChange}
+                        placeholder="Describe qué estás solicitando y por qué lo necesitas" />
                 </div>
                 <div className="mb-3">
-                    <label className="form-label">Persona que levanta el ticket</label>
-                    <input type="text" className="form-control" name="created_by" value={form.created_by} onChange={handleChange} />
+                    <label className="form-label">Items Solicitados</label>
+                    <textarea className="form-control" name="items" value={form.items} onChange={handleChange}
+                        placeholder="Lista los artículos que necesitas (nombre, cantidad, especificaciones)" />
                 </div>
                 <div className="mb-3">
-                    <label className="form-label">Comentarios</label>
+                    <label className="form-label">Fecha Esperada</label>
+                    <input type="date" className="form-control" name="expected_date" value={form.expected_date} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Solicitado por</label>
+                    <input type="text" className="form-control" name="requested_by" value={form.requested_by} onChange={handleChange} />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Comentarios Adicionales</label>
                     <textarea className="form-control" name="comments" value={form.comments} onChange={handleChange} />
                 </div>
                 {error && <div className="alert alert-danger">{error}</div>}
                 {success && <div className="alert alert-success">{success}</div>}
-                <button type="submit" className="btn btn-primary">Crear Ticket</button>
+                <button type="submit" className="btn btn-primary">Crear Requisición</button>
             </form>
         </div>
     );
 };
-               
